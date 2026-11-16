@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// A stable release key lets each new APK install over the previous one without wiping the wardrobe.
+val keyProps = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -24,11 +32,6 @@ android {
         versionName = flutter.versionName
     }
 
-    // A stable release key lets each new APK install over the previous one without wiping the wardrobe.
-    val keyProps = java.util.Properties().apply {
-        val f = rootProject.file("key.properties")
-        if (f.exists()) f.inputStream().use { load(it) }
-    }
     signingConfigs {
         if (keyProps.containsKey("storeFile")) {
             create("release") {
