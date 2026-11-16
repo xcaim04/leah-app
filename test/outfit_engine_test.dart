@@ -156,6 +156,9 @@ void main() {
       ], weights: const ScoringWeights.defaults());
       expect(complementary.first.score, greaterThan(0));
       expect(neutral.first.score, greaterThan(0));
+      // Good looks must not all saturate at 100% (scores were clamped before).
+      expect(complementary.first.score, lessThan(1));
+      expect(neutral.first.score, lessThan(1));
     });
   });
 }

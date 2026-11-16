@@ -62,8 +62,14 @@ OutfitScoreResult scoreWithDetails(
   score -= clashPairs * weights.saturationClashPenalty;
   score -= similarHuePairs * weights.similarHuePenalty;
 
-  if (score < 0) score = 0;
-  if (score > 1) score = 1;
+  // Divide by the best achievable score (0.9 = top pair harmony) instead of
+  // clamping, otherwise most looks saturate at 100% and tie.
+  final maxScore = weights.baseScore +
+      0.9 * weights.harmonyWeight +
+      weights.neutralBonus +
+      weights.occasionBonus +
+      weights.seasonBonus;
+  score = (score / maxScore).clamp(0.0, 1.0);
 
   var dominant = HarmonyType.neutral;
   var maxCount = -1;
