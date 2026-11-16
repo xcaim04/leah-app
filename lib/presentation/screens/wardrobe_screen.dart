@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/garment.dart';
+import '../../domain/wardrobe/garment_filter.dart';
 import '../providers/providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/filter_bar.dart';
@@ -20,15 +21,6 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
   GarmentCategory? _category;
   Occasion? _occasion;
   Season? _season;
-
-  List<Garment> _applyFilters(List<Garment> items) {
-    return items.where((g) {
-      if (_category != null && g.category != _category) return false;
-      if (_occasion != null && g.occasion != _occasion) return false;
-      if (_season != null && g.season != _season) return false;
-      return true;
-    }).toList();
-  }
 
   Future<void> _openForm() async {
     await Navigator.of(context).push<bool>(
@@ -67,7 +59,12 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
           message: '$error',
         ),
         data: (items) {
-          final filtered = _applyFilters(items);
+          final filtered = filterGarments(
+            items,
+            category: _category,
+            occasion: _occasion,
+            season: _season,
+          );
           return Column(
             children: [
               FilterBar(
