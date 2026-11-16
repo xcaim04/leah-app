@@ -33,3 +33,6 @@ Thumbs.db
 
 # Misc
 *.log
+
+# Local git tooling (bare remote mirror)
+.leah/
