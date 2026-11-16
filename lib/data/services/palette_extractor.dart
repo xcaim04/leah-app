@@ -23,7 +23,7 @@ class PaletteExtractor {
     );
 
     final colors = entries.map((entry) {
-      final value = entry.color.value;
+      final value = entry.color.toARGB32();
       final weight = totalPopulation > 0
           ? entry.population / totalPopulation
           : 1 / entries.length;
