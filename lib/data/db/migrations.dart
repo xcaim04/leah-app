@@ -4,9 +4,16 @@ import 'package:sqflite/sqflite.dart';
 class Migrations {
   Migrations._();
 
-  static const int version = 1;
+  static const int version = 2;
 
   static Future<void> onCreate(Database db, int version) async {
+    await createV1(db);
+    await _createV2(db);
+  }
+
+  /// Original v1 schema (wardrobe + feedback). Public so tests can build a
+  /// v1 database and exercise the upgrade path.
+  static Future<void> createV1(Database db) async {
     await db.execute('''
       CREATE TABLE garments (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +53,16 @@ class Migrations {
     int oldVersion,
     int newVersion,
   ) async {
-    // Reserved for future schema migrations.
+    if (oldVersion < 2) await _createV2(db);
+  }
+
+  /// v2: key/value app settings. Purely additive, never touches wardrobe data.
+  static Future<void> _createV2(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
   }
 }

@@ -5,6 +5,7 @@ import '../../domain/models/outfit_feedback.dart';
 import '../providers/outfit_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/outfit_card.dart';
+import '../widgets/theme_mode_button.dart';
 
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
@@ -15,7 +16,10 @@ class FavoritesScreen extends ConsumerWidget {
     final ratings = ref.watch(latestRatingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Favoritos')),
+      appBar: AppBar(
+        title: const Text('Favoritos'),
+        actions: const [ThemeModeButton(), SizedBox(width: 8)],
+      ),
       body: outfitsAsync.when(
         data: (outfits) {
           final liked = outfits

@@ -7,6 +7,7 @@ import '../providers/providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/filter_bar.dart';
 import '../widgets/garment_card.dart';
+import '../widgets/theme_mode_button.dart';
 import 'garment_detail_screen.dart';
 import 'garment_form_screen.dart';
 
@@ -53,6 +54,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
       appBar: AppBar(
         title: const Text('Mi armario'),
         actions: const [
+          ThemeModeButton(),
           _OfflineBadge(),
           SizedBox(width: 16),
         ],

@@ -5,6 +5,7 @@ import '../../domain/models/garment.dart';
 import '../providers/outfit_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/outfit_card.dart';
+import '../widgets/theme_mode_button.dart';
 
 class OutfitsScreen extends ConsumerWidget {
   const OutfitsScreen({super.key});
@@ -15,7 +16,10 @@ class OutfitsScreen extends ConsumerWidget {
     final outfitsAsync = ref.watch(generatedOutfitsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Looks')),
+      appBar: AppBar(
+        title: const Text('Looks'),
+        actions: const [ThemeModeButton(), SizedBox(width: 8)],
+      ),
       body: Column(
         children: [
           _FiltersBar(filters: filters),

@@ -92,16 +92,16 @@ class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: colorScheme.primaryContainer, width: 2),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primaryContainer, width: 1.5),
         ),
       ),
       dividerTheme: DividerThemeData(
@@ -128,14 +128,14 @@ class AppTheme {
         color: onSurface,
       ),
       headlineMedium: TextStyle(
-        fontSize: 24,
-        height: 32 / 24,
+        fontSize: 22,
+        height: 28 / 22,
         fontWeight: FontWeight.w600,
         color: onSurface,
       ),
       headlineSmall: TextStyle(
-        fontSize: 20,
-        height: 28 / 20,
+        fontSize: 18,
+        height: 24 / 18,
         fontWeight: FontWeight.w600,
         color: onSurface,
       ),
@@ -168,17 +168,20 @@ class AppTheme {
       ),
       labelLarge: TextStyle(
         fontSize: 14,
+        height: 20 / 14,
         fontWeight: FontWeight.w600,
         color: onSurface,
       ),
       labelMedium: TextStyle(
         fontSize: 12,
+        height: 16 / 12,
         fontWeight: FontWeight.w600,
         color: onSurface,
       ),
       labelSmall: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
+        fontSize: 10,
+        height: 14 / 10,
+        fontWeight: FontWeight.w700,
         color: colorScheme.onSurfaceVariant,
       ),
     );
@@ -193,7 +196,7 @@ class AppTheme {
     secondary: Color(0xFF6F518E),
     onSecondary: Color(0xFFFFFFFF),
     secondaryContainer: Color(0xFFDBB8FE),
-    onSecondaryContainer: Color(0xFF290A46),
+    onSecondaryContainer: Color(0xFF624581),
     tertiary: Color(0xFF733646),
     onTertiary: Color(0xFFFFFFFF),
     tertiaryContainer: Color(0xFF8F4D5E),
