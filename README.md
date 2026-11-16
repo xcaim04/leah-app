@@ -150,7 +150,7 @@ El workflow `.github/workflows/build-apk.yml` compila el APK **solo al actualiza
 git push github main:release
 ```
 
-Ejecuta `flutter analyze`, `flutter test` y `flutter build apk --release --split-per-abi`, y sube los APK (uno por arquitectura) como artefacto de la ejecución. En un teléfono moderno, el que necesitas es `app-arm64-v8a-release.apk`.
+Ejecuta `flutter analyze`, `flutter test` y `flutter build apk --release --split-per-abi` para ARM (64 y 32 bits), y sube los dos APK como artefacto de la ejecución. En un teléfono moderno, el que necesitas es `app-arm64-v8a-release.apk`. El de 32 bits (`armeabi-v7a`) es solo para móviles muy antiguos.
 
 ### Firma: por qué importa una clave estable
 

@@ -39,3 +39,6 @@ Thumbs.db
 
 # Linux desktop is only for local UI previews (tool/preview_desktop.dart)
 /linux/
+
+# Downloaded CI APK artifacts
+/mi-armario-apk-*/
