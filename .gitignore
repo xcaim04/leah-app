@@ -36,3 +36,6 @@ Thumbs.db
 
 # Local git tooling (bare remote mirror)
 .leah/
+
+# Linux desktop is only for local UI previews (tool/preview_desktop.dart)
+/linux/
