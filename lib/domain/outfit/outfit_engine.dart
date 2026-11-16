@@ -10,6 +10,7 @@ List<Outfit> generate(
   Season? season,
   ScoringWeights weights = const ScoringWeights.defaults(),
   int limit = 20,
+  Set<String> excludedSignatures = const {},
 }) {
   final filtered = garments.where((g) {
     if (occasion != null && g.occasion != occasion) return false;
@@ -17,15 +18,21 @@ List<Outfit> generate(
     return true;
   }).toList();
 
-  final tops = filtered.where((g) => g.category == GarmentCategory.top).toList();
-  final bottoms =
-      filtered.where((g) => g.category == GarmentCategory.bottom).toList();
-  final dresses =
-      filtered.where((g) => g.category == GarmentCategory.dress).toList();
-  final footwear =
-      filtered.where((g) => g.category == GarmentCategory.footwear).toList();
-  final outerwear =
-      filtered.where((g) => g.category == GarmentCategory.outerwear).toList();
+  final tops = filtered
+      .where((g) => g.category == GarmentCategory.top)
+      .toList();
+  final bottoms = filtered
+      .where((g) => g.category == GarmentCategory.bottom)
+      .toList();
+  final dresses = filtered
+      .where((g) => g.category == GarmentCategory.dress)
+      .toList();
+  final footwear = filtered
+      .where((g) => g.category == GarmentCategory.footwear)
+      .toList();
+  final outerwear = filtered
+      .where((g) => g.category == GarmentCategory.outerwear)
+      .toList();
 
   final combos = <List<Garment>>[];
 
@@ -57,16 +64,23 @@ List<Outfit> generate(
     }
   }
 
-  final outfits = combos.map((items) {
-    final result = scoreWithDetails(items, weights);
-    final explanation = explainOutfit(
-      items,
-      result.dominantHarmony,
-      occasion: occasion ?? items.first.occasion,
-      season: season ?? items.first.season,
-    );
-    return Outfit(garments: items, score: result.score, explanation: explanation);
-  }).toList();
+  final outfits = combos
+      .map((items) {
+        final result = scoreWithDetails(items, weights);
+        final explanation = explainOutfit(
+          items,
+          result.dominantHarmony,
+          occasion: occasion ?? items.first.occasion,
+          season: season ?? items.first.season,
+        );
+        return Outfit(
+          garments: items,
+          score: result.score,
+          explanation: explanation,
+        );
+      })
+      .where((o) => !excludedSignatures.contains(o.signature))
+      .toList();
 
   outfits.sort((a, b) => b.score.compareTo(a.score));
   if (limit <= 0 || outfits.length <= limit) return outfits;

@@ -39,11 +39,32 @@ void main() {
       final outfits = generate(garments, limit: 10);
       expect(outfits, isNotEmpty);
       expect(
-        outfits.any((o) =>
-            o.garments.length == 2 &&
-            o.garments.any((x) => x.category == GarmentCategory.top) &&
-            o.garments.any((x) => x.category == GarmentCategory.bottom)),
+        outfits.any(
+          (o) =>
+              o.garments.length == 2 &&
+              o.garments.any((x) => x.category == GarmentCategory.top) &&
+              o.garments.any((x) => x.category == GarmentCategory.bottom),
+        ),
         isTrue,
+      );
+    });
+
+    test('excluded (disliked) outfits are dropped before the limit', () {
+      final garments = [
+        g(id: 1, category: GarmentCategory.top, color: blue),
+        g(id: 2, category: GarmentCategory.bottom, color: white),
+        g(id: 3, category: GarmentCategory.bottom, color: red),
+      ];
+      final best = generate(garments, limit: 1).single;
+      final next = generate(
+        garments,
+        limit: 1,
+        excludedSignatures: {best.signature},
+      );
+      expect(next.single.signature, isNot(best.signature));
+      expect(
+        generate(garments).map((o) => o.signature),
+        contains(best.signature),
       );
     });
 
@@ -54,25 +75,59 @@ void main() {
       ];
       final outfits = generate(garments, limit: 10);
       expect(
-        outfits.any((o) =>
-            o.garments.any((x) => x.category == GarmentCategory.dress) &&
-            o.garments.any((x) => x.category == GarmentCategory.footwear)),
+        outfits.any(
+          (o) =>
+              o.garments.any((x) => x.category == GarmentCategory.dress) &&
+              o.garments.any((x) => x.category == GarmentCategory.footwear),
+        ),
         isTrue,
       );
     });
 
     test('filters by occasion and season', () {
       final garments = [
-        g(id: 1, category: GarmentCategory.top, color: blue, occasion: Occasion.work, season: Season.winter),
-        g(id: 2, category: GarmentCategory.bottom, color: white, occasion: Occasion.work, season: Season.winter),
-        g(id: 3, category: GarmentCategory.top, color: red, occasion: Occasion.party, season: Season.summer),
-        g(id: 4, category: GarmentCategory.bottom, color: green, occasion: Occasion.party, season: Season.summer),
+        g(
+          id: 1,
+          category: GarmentCategory.top,
+          color: blue,
+          occasion: Occasion.work,
+          season: Season.winter,
+        ),
+        g(
+          id: 2,
+          category: GarmentCategory.bottom,
+          color: white,
+          occasion: Occasion.work,
+          season: Season.winter,
+        ),
+        g(
+          id: 3,
+          category: GarmentCategory.top,
+          color: red,
+          occasion: Occasion.party,
+          season: Season.summer,
+        ),
+        g(
+          id: 4,
+          category: GarmentCategory.bottom,
+          color: green,
+          occasion: Occasion.party,
+          season: Season.summer,
+        ),
       ];
-      final outfits = generate(garments, occasion: Occasion.work, season: Season.winter, limit: 10);
+      final outfits = generate(
+        garments,
+        occasion: Occasion.work,
+        season: Season.winter,
+        limit: 10,
+      );
       expect(outfits, isNotEmpty);
       for (final o in outfits) {
         expect(o.garments.every((x) => x.occasion == Occasion.work), isTrue);
-        expect(o.garments.every((x) => x.season.isCompatibleWith(Season.winter)), isTrue);
+        expect(
+          o.garments.every((x) => x.season.isCompatibleWith(Season.winter)),
+          isTrue,
+        );
       }
     });
 

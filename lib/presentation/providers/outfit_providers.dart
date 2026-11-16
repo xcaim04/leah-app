@@ -43,14 +43,16 @@ class OutfitFiltersNotifier extends StateNotifier<OutfitFilters> {
 
 final outfitFiltersProvider =
     StateNotifierProvider<OutfitFiltersNotifier, OutfitFilters>(
-  (ref) => OutfitFiltersNotifier(),
-);
+      (ref) => OutfitFiltersNotifier(),
+    );
 
 final scoringWeightsProvider = Provider<ScoringWeights>((ref) {
   const base = ScoringWeights.defaults();
-  final garments = ref.watch(garmentsProvider).asData?.value ?? const <Garment>[];
+  final garments =
+      ref.watch(garmentsProvider).asData?.value ?? const <Garment>[];
   final feedback =
-      ref.watch(outfitFeedbackProvider).asData?.value ?? const <OutfitFeedback>[];
+      ref.watch(outfitFeedbackProvider).asData?.value ??
+      const <OutfitFeedback>[];
   if (garments.isEmpty || feedback.isEmpty) return base;
   return learnWeights(feedback, garments, base: base);
 });
@@ -59,6 +61,10 @@ final generatedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
   final garmentsAsync = ref.watch(garmentsProvider);
   final filters = ref.watch(outfitFiltersProvider);
   final weights = ref.watch(scoringWeightsProvider);
+  final disliked = {
+    for (final e in ref.watch(latestRatingsProvider).entries)
+      if (e.value == FeedbackRating.dislike) e.key,
+  };
   return garmentsAsync.whenData(
     (garments) => engine.generate(
       garments,
@@ -66,12 +72,14 @@ final generatedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
       season: filters.season,
       weights: weights,
       limit: 20,
+      excludedSignatures: disliked,
     ),
   );
 });
 
 final latestRatingsProvider = Provider<Map<String, FeedbackRating>>((ref) {
-  final feedback = ref.watch(outfitFeedbackProvider).asData?.value ??
+  final feedback =
+      ref.watch(outfitFeedbackProvider).asData?.value ??
       const <OutfitFeedback>[];
   final result = <String, FeedbackRating>{};
   for (final entry in feedback) {
