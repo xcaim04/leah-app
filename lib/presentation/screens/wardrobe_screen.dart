@@ -112,6 +112,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openForm,
+        tooltip: 'Añadir prenda',
         child: const Icon(Icons.add),
       ),
     );
