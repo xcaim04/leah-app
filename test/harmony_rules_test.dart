@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mi_armario/domain/color/color_math.dart';
 import 'package:mi_armario/domain/outfit/harmony_rules.dart';
 

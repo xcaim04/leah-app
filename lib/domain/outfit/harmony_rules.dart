@@ -39,6 +39,12 @@ HarmonyResult classifyHarmony(HslColor a, HslColor b) {
   if (dist < 15) {
     return const HarmonyResult(HarmonyType.monochrome, 0.9);
   }
+  final sameSatPair = highSat && satDiff < 0.2;
+  // Near-identical saturated hues (15–25°) read as a mismatch, not analogous.
+  // shortcut: 25° is a heuristic cutoff, retune with real garments.
+  if (dist < 25 && sameSatPair) {
+    return const HarmonyResult(HarmonyType.clash, 0.25);
+  }
   if (dist < 40) {
     final penalty = highSat && satDiff < 0.15 ? 0.1 : 0.0;
     return HarmonyResult(HarmonyType.analogous, 0.82 - penalty);
@@ -49,7 +55,7 @@ HarmonyResult classifyHarmony(HslColor a, HslColor b) {
   if ((dist >= 100 && dist <= 140) || (dist >= 220 && dist <= 260)) {
     return const HarmonyResult(HarmonyType.triad, 0.8);
   }
-  if (dist >= 15 && dist < 60 && highSat && satDiff < 0.2) {
+  if (dist < 60 && sameSatPair) {
     return const HarmonyResult(HarmonyType.clash, 0.25);
   }
   if (highSat && dist >= 60 && dist < 100) {

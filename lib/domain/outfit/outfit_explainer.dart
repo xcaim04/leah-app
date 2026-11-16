@@ -1,4 +1,5 @@
 import '../models/garment.dart';
+import '../color/color_math.dart';
 import 'harmony_rules.dart';
 
 String explainOutfit(

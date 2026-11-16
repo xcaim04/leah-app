@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mi_armario/domain/models/garment.dart';
 import 'package:mi_armario/domain/models/garment_color.dart';
 import 'package:mi_armario/domain/models/outfit_feedback.dart';
