@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/garment.dart';
-import '../../domain/models/outfit.dart';
 import '../providers/outfit_providers.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/outfit_card.dart';
 
 class OutfitsScreen extends ConsumerWidget {
   const OutfitsScreen({super.key});
@@ -35,7 +35,7 @@ class OutfitsScreen extends ConsumerWidget {
                   itemCount: outfits.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) =>
-                      _OutfitCard(outfit: outfits[index]),
+                      OutfitCard(outfit: outfits[index]),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -133,97 +133,6 @@ class _FilterChip extends StatelessWidget {
       selected: selected,
       onSelected: onSelected,
       visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _OutfitCard extends StatelessWidget {
-  const _OutfitCard({required this.outfit});
-
-  final Outfit outfit;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scorePct = (outfit.score * 100).round();
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final g in outfit.garments) _GarmentChip(garment: g),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _ScoreBadge(scorePct: scorePct),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              outfit.explanation,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GarmentChip extends StatelessWidget {
-  const _GarmentChip({required this.garment});
-
-  final Garment garment;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = garment.colors.isNotEmpty
-        ? Color.fromARGB(
-            255,
-            garment.colors.first.red,
-            garment.colors.first.green,
-            garment.colors.first.blue,
-          )
-        : Colors.grey;
-    return Chip(
-      avatar: CircleAvatar(backgroundColor: color),
-      label: Text(garment.category.label),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-}
-
-class _ScoreBadge extends StatelessWidget {
-  const _ScoreBadge({required this.scorePct});
-
-  final int scorePct;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        '$scorePct%',
-        style: theme.textTheme.labelLarge?.copyWith(
-          color: theme.colorScheme.onPrimaryContainer,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
     );
   }
 }
