@@ -15,6 +15,7 @@ class MiArmarioApp extends StatelessWidget {
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
       locale: const Locale('es'),
+      supportedLocales: const [Locale('es'), Locale('en')],
       home: const AppShell(),
     );
   }
