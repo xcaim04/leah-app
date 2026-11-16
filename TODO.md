@@ -1,7 +1,7 @@
 # Mi Armario (Leah) — TODO
 
-App Flutter Android de armario digital para una sola usuaria. 100 % local, offline, gratis.
-Sin backend, sin APIs, sin cuentas, sin LLM. UI en español, código en inglés.
+App Flutter Android de armario digital para una sola usuaria. Local, gratis, sin backend, sin cuentas, sin LLM.
+UI en español, código en inglés. **Excepción (decisión de la usuaria):** el "Look del día" usa red (Open-Meteo, sin API key) y ubicación aproximada opcional; ya no es 100 % offline. Sin permiso/red cae a "clima cálido".
 
 **Estado:** Fases 1–5 implementadas, revisadas e integradas en `main`. Falta el andamiaje Android y la verificación/compilación real (bloqueado: no se ha ejecutado `flutter`/`dart`).
 
@@ -48,6 +48,12 @@ Sin backend, sin APIs, sin cuentas, sin LLM. UI en español, código en inglés.
 - Sistema de diseño de Stitch aplicado (`design/coquette_violette/DESIGN.md`): paleta Material 3 violeta exacta (claro + oscuro derivado) y tipografía en `app_theme.dart` (ya no usa semilla `0xFFB0698A`).
 - Tema de componentes: tarjetas redondeadas 24, chips tipo píldora, botones `StadiumBorder`, `NavigationBar` con indicador `secondaryContainer`, inputs rellenos sin borde.
 - Pantallas re-estilizadas: armario (tarjeta de prenda con píldora de categoría, badge "Offline"), formulario (foto hero con Cámara/Galería, selectores por chips, tarjetas de sección), detalle (hero, paleta, tarjetas de especificación, dock Editar/Eliminar), looks (miniaturas de prenda + badge de puntuación), favoritos.
+
+### Look del día
+- Sección deslizable (`PageView`, hasta 10 looks) arriba de Looks, con clima y tipo de día.
+- Clima: GPS aproximado solo con permiso (se pide una vez) + Open-Meteo (coordenadas a 2 decimales, timeout 5 s). Sin permiso/red/error → cálido (verano). Temperatura → temporada (≥ 24 verano, 15–24 entretiempo, < 15 invierno); con lluvia se priorizan looks con abrigo.
+- Feriados de Cuba offline (fijos + Viernes Santo vía Pascua): feriado → fiesta, fin de semana → casual, laborable → trabajo, con caída a cualquier ocasión.
+- Permisos Android: `INTERNET`, `ACCESS_COARSE_LOCATION`. Pendiente probar en dispositivo real.
 
 ---
 

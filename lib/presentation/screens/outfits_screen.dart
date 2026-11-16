@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/garment.dart';
 import '../providers/outfit_providers.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/look_of_the_day_section.dart';
 import '../widgets/outfit_card.dart';
 import '../widgets/theme_mode_button.dart';
 
@@ -20,33 +21,49 @@ class OutfitsScreen extends ConsumerWidget {
         title: const Text('Looks'),
         actions: const [ThemeModeButton(), SizedBox(width: 8)],
       ),
-      body: Column(
-        children: [
-          _FiltersBar(filters: filters),
-          Expanded(
-            child: outfitsAsync.when(
-              data: (outfits) {
-                if (outfits.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.auto_awesome_outlined,
-                    title: 'Sin combinaciones',
-                    message:
-                        'Añade más prendas o ajusta los filtros para generar looks.',
-                  );
-                }
-                return ListView.separated(
+      body: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(child: LookOfTheDaySection()),
+          SliverToBoxAdapter(child: _FiltersBar(filters: filters)),
+          ...outfitsAsync.when(
+            data: (outfits) {
+              if (outfits.isEmpty) {
+                return const [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: EmptyState(
+                      icon: Icons.auto_awesome_outlined,
+                      title: 'Sin combinaciones',
+                      message:
+                          'Añade más prendas o ajusta los filtros para generar looks.',
+                    ),
+                  ),
+                ];
+              }
+              return [
+                SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: outfits.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) =>
-                      OutfitCard(outfit: outfits[index]),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(
-                child: Text('Error al generar looks: $e'),
+                  sliver: SliverList.separated(
+                    itemCount: outfits.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    itemBuilder: (context, index) =>
+                        OutfitCard(outfit: outfits[index]),
+                  ),
+                ),
+              ];
+            },
+            loading: () => const [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
               ),
-            ),
+            ],
+            error: (e, _) => [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: Text('Error al generar looks: $e')),
+              ),
+            ],
           ),
         ],
       ),

@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/services/weather_service.dart';
+
 import '../../domain/models/garment.dart';
 import '../../domain/models/outfit.dart';
 import '../../domain/models/outfit_feedback.dart';
 import '../../domain/outfit/outfit_engine.dart' as engine;
 import '../../domain/outfit/scoring_weights.dart';
 import '../../domain/outfit/weight_learning.dart';
+import '../../domain/today/look_of_the_day.dart';
 import 'providers.dart';
 
 class OutfitFilters {
@@ -61,10 +64,7 @@ final generatedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
   final garmentsAsync = ref.watch(garmentsProvider);
   final filters = ref.watch(outfitFiltersProvider);
   final weights = ref.watch(scoringWeightsProvider);
-  final disliked = {
-    for (final e in ref.watch(latestRatingsProvider).entries)
-      if (e.value == FeedbackRating.dislike) e.key,
-  };
+  final disliked = ref.watch(dislikedSignaturesProvider);
   return garmentsAsync.whenData(
     (garments) => engine.generate(
       garments,
@@ -75,6 +75,42 @@ final generatedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
       excludedSignatures: disliked,
     ),
   );
+});
+
+/// Signatures of looks she disliked; never suggested again.
+final dislikedSignaturesProvider = Provider<Set<String>>(
+  (ref) => {
+    for (final e in ref.watch(latestRatingsProvider).entries)
+      if (e.value == FeedbackRating.dislike) e.key,
+  },
+);
+
+final weatherServiceProvider = Provider<WeatherService>(
+  (ref) => OpenMeteoWeatherService(ref.watch(settingsRepositoryProvider)),
+);
+
+/// Fetched once per session; null = unknown (fallback: warm weather).
+final todayWeatherProvider = FutureProvider<Weather?>(
+  (ref) => ref.watch(weatherServiceProvider).current(),
+);
+
+/// Today's suggestions. Uses the warm fallback while the weather loads, then
+/// recomputes when it arrives.
+final lookOfTheDayProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
+  final weather = ref.watch(todayWeatherProvider).asData?.value;
+  final weights = ref.watch(scoringWeightsProvider);
+  final disliked = ref.watch(dislikedSignaturesProvider);
+  return ref
+      .watch(garmentsProvider)
+      .whenData(
+        (garments) => lookOfTheDay(
+          garments,
+          date: DateTime.now(),
+          weather: weather,
+          weights: weights,
+          excludedSignatures: disliked,
+        ),
+      );
 });
 
 final latestRatingsProvider = Provider<Map<String, FeedbackRating>>((ref) {
