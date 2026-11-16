@@ -25,11 +25,8 @@ class ImageFileNames {
 class ImageStorageHelper {
   static final Random _random = Random();
 
-  static String extensionFromPath(String sourcePath) {
-    final ext = p.extension(sourcePath).toLowerCase();
-    if (ext.isEmpty) return '.jpg';
-    return ext == '.jpeg' ? '.jpg' : ext;
-  }
+  /// Compressed output is always JPEG, so the stored extension is always .jpg.
+  static String extensionFromPath(String sourcePath) => '.jpg';
 
   static String generateBaseName({DateTime? now, int? randomValue}) {
     final time = now ?? DateTime.now();

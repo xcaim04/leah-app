@@ -3,9 +3,9 @@ import 'package:mi_armario/data/services/image_storage.dart';
 
 void main() {
   group('ImageStorageHelper', () {
-    test('extensionFromPath normalizes jpeg and defaults to jpg', () {
+    test('extensionFromPath always returns jpg (output is jpeg)', () {
       expect(ImageStorageHelper.extensionFromPath('/tmp/photo.JPEG'), '.jpg');
-      expect(ImageStorageHelper.extensionFromPath('/tmp/photo.png'), '.png');
+      expect(ImageStorageHelper.extensionFromPath('/tmp/photo.png'), '.jpg');
       expect(ImageStorageHelper.extensionFromPath('/tmp/photo'), '.jpg');
     });
 
