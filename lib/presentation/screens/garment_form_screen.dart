@@ -59,29 +59,40 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Cámara'),
-              onTap: () async {
+              onTap: () {
                 Navigator.of(context).pop();
-                final file = await _picker.pickImage(source: ImageSource.camera);
-                if (file != null && mounted) {
-                  setState(() => _pickedImagePath = file.path);
-                }
+                _pickFrom(
+                  ImageSource.camera,
+                  'No se pudo abrir la cámara. Revisa los permisos.',
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Galería'),
-              onTap: () async {
+              onTap: () {
                 Navigator.of(context).pop();
-                final file = await _picker.pickImage(source: ImageSource.gallery);
-                if (file != null && mounted) {
-                  setState(() => _pickedImagePath = file.path);
-                }
+                _pickFrom(ImageSource.gallery, 'No se pudo abrir la galería.');
               },
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickFrom(ImageSource source, String errorMessage) async {
+    try {
+      final file = await _picker.pickImage(source: source);
+      if (file != null && mounted) {
+        setState(() => _pickedImagePath = file.path);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -108,7 +119,11 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         final saved = await imageStorage.save(_pickedImagePath!);
         photoPath = saved.photoPath;
         thumbPath = saved.thumbPath;
-        colors = await paletteExtractor.extract(photoPath);
+        try {
+          colors = await paletteExtractor.extract(photoPath);
+        } catch (_) {
+          colors = const [];
+        }
         if (_isEditing) {
           await imageStorage.delete(
             widget.garment!.photoPath,
