@@ -33,6 +33,7 @@ class GarmentCard extends StatelessWidget {
                   Image.file(
                     File(garment.thumbPath),
                     fit: BoxFit.cover,
+                    cacheWidth: 600,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: theme.colorScheme.surfaceContainerHighest,
                       child: Icon(
@@ -47,19 +48,30 @@ class GarmentCard extends StatelessWidget {
                     child: Material(
                       color: theme.colorScheme.surface.withValues(alpha: 0.75),
                       shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: onFavoriteToggle,
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Icon(
-                            garment.favorite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            size: 18,
-                            color: garment.favorite
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.onSurfaceVariant,
+                      child: Tooltip(
+                        message: garment.favorite
+                            ? 'Quitar de favoritos'
+                            : 'Marcar como favorito',
+                        child: Semantics(
+                          button: true,
+                          label: garment.favorite
+                              ? 'Quitar de favoritos'
+                              : 'Marcar como favorito',
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: onFavoriteToggle,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                garment.favorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                size: 18,
+                                color: garment.favorite
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         ),
                       ),
