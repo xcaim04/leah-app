@@ -33,6 +33,7 @@ class GarmentCard extends StatelessWidget {
                   Image.file(
                     File(garment.thumbPath),
                     fit: BoxFit.cover,
+                    cacheWidth: 600,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: theme.colorScheme.surfaceContainerHighest,
                       child: Icon(

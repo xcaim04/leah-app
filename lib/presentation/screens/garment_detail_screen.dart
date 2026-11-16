@@ -124,6 +124,7 @@ class _GarmentDetailBody extends ConsumerWidget {
             child: Image.file(
               File(garment.photoPath),
               fit: BoxFit.cover,
+              cacheWidth: 1200,
               errorBuilder: (context, error, stackTrace) => Container(
                 color: theme.colorScheme.surfaceContainerHighest,
                 child: const Icon(Icons.broken_image_outlined, size: 48),
