@@ -50,7 +50,13 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
     final garments = ref.watch(garmentsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi armario')),
+      appBar: AppBar(
+        title: const Text('Mi armario'),
+        actions: const [
+          _OfflineBadge(),
+          SizedBox(width: 16),
+        ],
+      ),
       body: garments.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => EmptyState(
@@ -87,12 +93,12 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                             : 'Prueba con otros filtros.',
                       )
                     : GridView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
                           childAspectRatio: 0.72,
                         ),
                         itemCount: filtered.length,
@@ -114,6 +120,43 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
         onPressed: _openForm,
         tooltip: 'Añadir prenda',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _OfflineBadge extends StatelessWidget {
+  const _OfflineBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Offline',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSecondaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

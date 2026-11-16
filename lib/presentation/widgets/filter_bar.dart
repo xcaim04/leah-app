@@ -31,6 +31,7 @@ class FilterBar extends StatelessWidget {
             (category) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
+                showCheckmark: false,
                 label: Text(category.label),
                 selected: selectedCategory == category,
                 onSelected: (_) => onCategoryChanged(
@@ -44,6 +45,7 @@ class FilterBar extends StatelessWidget {
             (occasion) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
+                showCheckmark: false,
                 label: Text(occasion.label),
                 selected: selectedOccasion == occasion,
                 onSelected: (_) => onOccasionChanged(
@@ -57,6 +59,7 @@ class FilterBar extends StatelessWidget {
             (season) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
+                showCheckmark: false,
                 label: Text(season.label),
                 selected: selectedSeason == season,
                 onSelected: (_) => onSeasonChanged(
