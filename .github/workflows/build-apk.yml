@@ -45,7 +45,8 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
-      - run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
+      # Universal APK (ARM 32/64 + x86_64) so one file installs on any phone.
+      - run: flutter build apk --release
 
       - uses: actions/upload-artifact@v7
         with:
