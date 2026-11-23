@@ -28,15 +28,16 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
-      # Without these secrets the APK is signed with a throwaway debug key and won't update over a previous install.
+      # Signs with the release key from repo secrets so each APK installs over the previous one.
       - name: Set up release signing
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        if: env.KEYSTORE_BASE64 != ''
+        # Fail instead of silently shipping a debug-signed APK that can't update the installed app.
         run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "::error::Missing signing secrets"; exit 1; fi
           echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.jks
           cat > android/key.properties <<EOF
           storeFile=release.jks

@@ -83,7 +83,7 @@ class OutfitCard extends ConsumerWidget {
               children: [
                 IconButton(
                   tooltip: liked
-                      ? 'En favoritos'
+                      ? 'Quitar de favoritos'
                       : 'Guardar en favoritos',
                   constraints: const BoxConstraints(
                     minWidth: 48,
@@ -93,10 +93,8 @@ class OutfitCard extends ConsumerWidget {
                     liked ? Icons.favorite : Icons.favorite_border,
                     color: liked ? scheme.primary : scheme.onSurfaceVariant,
                   ),
-                  // No neutral rating API: un-liking would need a dislike,
-                  // which hides the look forever, so just inform.
                   onPressed: liked
-                      ? () => snack('Ya está en favoritos')
+                      ? () => controller.clear(outfit)
                       : () => controller.like(outfit),
                 ),
                 PopupMenuButton<void>(

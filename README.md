@@ -22,8 +22,8 @@ Todo funciona **sin conexión**: no hay servidor, cuentas, anuncios ni inteligen
 
 - **Armario**: añade prendas con la cámara o la galería. Cada prenda tiene categoría (parte superior, parte inferior, vestido, calzado, abrigo, accesorio), ocasión (casual, trabajo, fiesta, deporte), temporada (verano, invierno, entretiempo, todo el año) y notas. Se puede filtrar, editar, borrar y marcar como favorita.
 - **Looks**: sugiere hasta 20 combinaciones ordenadas por puntuación, con una explicación en español de por qué combinan. Se pueden filtrar por ocasión y temporada.
-- **Feedback**: cada look tiene 👍 / 👎. Los votos ajustan las sugerencias futuras.
-- **Favoritos**: los looks que te han gustado.
+- **Feedback**: cada look tiene un ♡ para guardarlo y, en su menú ⋮, «No sugerir más». Los votos ajustan las sugerencias futuras.
+- **Favoritos**: los looks guardados con ♡. Tocar el ♡ de nuevo lo quita de favoritos.
 - **Tema** claro, oscuro o el del sistema, desde el botón de la barra superior. La elección se guarda.
 
 ## Cómo se generan los looks
@@ -64,17 +64,17 @@ Cada tipo tiene una nota (de 0,9 en monocromático a 0,25 en choque). La puntuac
 - todas las prendas son de la **misma ocasión**;
 - todas las prendas son de **temporadas compatibles** ("todo el año" vale para cualquiera);
 
-y unas **penalizaciones** por cada par que choca o con tonos casi iguales pero no idénticos (15–30°, que suelen parecer un error). El resultado se acota entre 0 y 100 %.
+y unas **penalizaciones** por cada par que choca o con tonos casi iguales pero no idénticos (15–30°, que suelen parecer un error). El resultado se divide entre la mejor puntuación posible, para que no todos los looks empaten en 100 %.
 
 ### 4. Aprender de tus votos
 
-Cada 👍 / 👎 se guarda. Con ese historial (`weight_learning.dart`) la app mira qué rasgos tenían los looks que te gustaron y los que no (neutros, choques, tonos parecidos, misma ocasión, misma temporada) y sube o baja el peso de cada bonus o penalización. Por ejemplo, si apruebas a menudo looks con choques de color, la penalización por choque baja.
+Cada ♡ y cada «No sugerir más» se guarda. Con ese historial (`weight_learning.dart`) la app mira qué rasgos tenían los looks que te gustaron y los que no (neutros, choques, tonos parecidos, misma ocasión, misma temporada) y sube o baja el peso de cada bonus o penalización. Por ejemplo, si apruebas a menudo looks con choques de color, la penalización por choque baja.
 
 Para que unos pocos votos no lo desbaraten todo, cada peso queda **acotado entre 0,3× y 1,7×** de su valor original. Los pesos no se almacenan: se recalculan desde el historial cada vez, así que siempre son explicables.
 
 ### 5. Ocultar lo que no te gusta
 
-Los looks cuyo último voto es 👎 no vuelven a aparecer en las sugerencias. Si cambias de opinión, basta con que el último voto sea 👍.
+Los looks marcados con «No sugerir más» no vuelven a aparecer en las sugerencias.
 
 ## Tecnología
 

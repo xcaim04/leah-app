@@ -136,6 +136,14 @@ class OutfitFeedbackController {
   Future<void> dislike(Outfit outfit) =>
       _setRating(outfit, FeedbackRating.dislike);
 
+  /// Forgets the vote: the look leaves Favoritos but can be suggested again.
+  Future<void> clear(Outfit outfit) async {
+    await _ref
+        .read(outfitFeedbackRepositoryProvider)
+        .deleteBySignature(outfit.signature);
+    _ref.invalidate(outfitFeedbackProvider);
+  }
+
   Future<void> _setRating(Outfit outfit, FeedbackRating rating) async {
     final repository = _ref.read(outfitFeedbackRepositoryProvider);
     final feedback = OutfitFeedback(
