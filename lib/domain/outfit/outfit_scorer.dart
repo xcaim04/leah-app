@@ -13,39 +13,25 @@ class OutfitScoreResult {
 OutfitScoreResult scoreWithDetails(
   List<Garment> garments,
   ScoringWeights weights,
+) => scoreWithHsl(garments, garments.map(dominantHsl).toList(), weights);
+
+/// Same as [scoreWithDetails] with each garment's [dominantHsl] precomputed
+/// (parallel to [garments]), so `generate` doesn't redo it per combination.
+OutfitScoreResult scoreWithHsl(
+  List<Garment> garments,
+  List<HslColor> hsl,
+  ScoringWeights weights,
 ) {
   if (garments.length < 2) {
     return const OutfitScoreResult(0, HarmonyType.neutral);
   }
 
-  var harmonySum = 0.0;
-  var pairs = 0;
-  var clashPairs = 0;
-  var neutralPairs = 0;
-  var similarHuePairs = 0;
-  final typeCounts = <HarmonyType, int>{};
+  final stats = pairStats(hsl);
 
-  for (var i = 0; i < garments.length; i++) {
-    for (var j = i + 1; j < garments.length; j++) {
-      final a = dominantHsl(garments[i]);
-      final b = dominantHsl(garments[j]);
-      final result = classifyHarmony(a, b);
-      harmonySum += result.score;
-      pairs++;
-      typeCounts[result.type] = (typeCounts[result.type] ?? 0) + 1;
-      if (result.type == HarmonyType.clash) clashPairs++;
-      if (result.type == HarmonyType.neutral) neutralPairs++;
-      final dist = hueDistance(a.hue, b.hue);
-      if (!isNeutral(a) && !isNeutral(b) && dist >= 15 && dist < 30) {
-        similarHuePairs++;
-      }
-    }
-  }
-
-  final avgHarmony = pairs == 0 ? 0.0 : harmonySum / pairs;
+  final avgHarmony = stats.pairs == 0 ? 0.0 : stats.harmonySum / stats.pairs;
   var score = weights.baseScore + avgHarmony * weights.harmonyWeight;
 
-  if (neutralPairs > 0) {
+  if (stats.neutral > 0) {
     score += weights.neutralBonus;
   }
 
@@ -59,8 +45,8 @@ OutfitScoreResult scoreWithDetails(
     score += weights.seasonBonus;
   }
 
-  score -= clashPairs * weights.saturationClashPenalty;
-  score -= similarHuePairs * weights.similarHuePenalty;
+  score -= stats.clash * weights.saturationClashPenalty;
+  score -= stats.similarHue * weights.similarHuePenalty;
 
   // Divide by the best achievable score (0.9 = top pair harmony) instead of
   // clamping, otherwise most looks saturate at 100% and tie.
@@ -73,7 +59,7 @@ OutfitScoreResult scoreWithDetails(
 
   var dominant = HarmonyType.neutral;
   var maxCount = -1;
-  typeCounts.forEach((type, count) {
+  stats.typeCounts.forEach((type, count) {
     if (count > maxCount) {
       maxCount = count;
       dominant = type;
@@ -81,8 +67,4 @@ OutfitScoreResult scoreWithDetails(
   });
 
   return OutfitScoreResult(score, dominant);
-}
-
-double score(List<Garment> garments, ScoringWeights weights) {
-  return scoreWithDetails(garments, weights).score;
 }

@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 class AppTheme {
   AppTheme._();
 
+  static const String _fontFamily = 'PlusJakartaSans';
+
   static ThemeData light() => _base(_lightScheme, Brightness.light);
   static ThemeData dark() => _base(_darkScheme, Brightness.dark);
 
   static ThemeData _base(ColorScheme colorScheme, Brightness brightness) {
-    final textTheme = _textTheme(colorScheme);
+    // Component themes below read styles from here, so the font must be on it too.
+    final textTheme = _textTheme(colorScheme).apply(fontFamily: _fontFamily);
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: _fontFamily,
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,

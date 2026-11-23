@@ -1,4 +1,3 @@
-import '../color/color_math.dart';
 import '../models/garment.dart';
 import '../models/outfit_feedback.dart';
 import 'harmony_rules.dart';
@@ -48,23 +47,10 @@ ScoringWeights learnWeights(
     }
     if (!complete || resolved.length < 2) continue;
 
-    var hasClash = false;
-    var hasSimilarHue = false;
-    var hasNeutral = false;
-
-    for (var i = 0; i < resolved.length; i++) {
-      for (var j = i + 1; j < resolved.length; j++) {
-        final a = dominantHsl(resolved[i]);
-        final b = dominantHsl(resolved[j]);
-        final result = classifyHarmony(a, b);
-        if (result.type == HarmonyType.clash) hasClash = true;
-        if (result.type == HarmonyType.neutral) hasNeutral = true;
-        final dist = hueDistance(a.hue, b.hue);
-        if (!isNeutral(a) && !isNeutral(b) && dist >= 15 && dist < 30) {
-          hasSimilarHue = true;
-        }
-      }
-    }
+    final stats = pairStats(resolved.map(dominantHsl).toList());
+    final hasClash = stats.clash > 0;
+    final hasSimilarHue = stats.similarHue > 0;
+    final hasNeutral = stats.neutral > 0;
 
     if (hasClash) clash.record(entry.rating);
     if (hasSimilarHue) similarHue.record(entry.rating);

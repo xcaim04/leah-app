@@ -6,7 +6,7 @@ import '../../domain/today/look_of_the_day.dart';
 import '../providers/outfit_providers.dart';
 import 'outfit_card.dart';
 
-/// "Look del día": swipeable suggestions for today's weather and day type.
+/// "Look del día": suggestions for today's weather and day type.
 class LookOfTheDaySection extends ConsumerStatefulWidget {
   const LookOfTheDaySection({super.key});
 
@@ -16,14 +16,7 @@ class LookOfTheDaySection extends ConsumerStatefulWidget {
 }
 
 class _LookOfTheDaySectionState extends ConsumerState<LookOfTheDaySection> {
-  final _controller = PageController(viewportFraction: 0.92);
-  int _page = 0;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +24,7 @@ class _LookOfTheDaySectionState extends ConsumerState<LookOfTheDaySection> {
     final scheme = theme.colorScheme;
     final looks = ref.watch(lookOfTheDayProvider).asData?.value;
     final count = looks?.length ?? 0;
-    final page = count == 0 ? 0 : _page.clamp(0, count - 1);
+    final index = count == 0 ? 0 : _index.clamp(0, count - 1);
 
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 8),
@@ -56,10 +49,10 @@ class _LookOfTheDaySectionState extends ConsumerState<LookOfTheDaySection> {
                 ),
                 if (count > 1)
                   Semantics(
-                    label: 'Sugerencia ${page + 1} de $count',
+                    label: 'Sugerencia ${index + 1} de $count',
                     excludeSemantics: true,
                     child: Text(
-                      '${page + 1} / $count',
+                      '${index + 1} / $count',
                       style: theme.textTheme.labelLarge?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -88,28 +81,26 @@ class _LookOfTheDaySectionState extends ConsumerState<LookOfTheDaySection> {
               ),
             )
           else
-            Semantics(
-              label: count > 1
-                  ? 'Sugerencias de hoy. Desliza para ver más.'
-                  : 'Sugerencia de hoy',
-              child: SizedBox(
-                // shortcut: fixed height, long explanations scroll inside
-                // the card; measure pages if cards grow much taller.
-                height: 250,
-                child: PageView.builder(
-                  controller: _controller,
-                  itemCount: count,
-                  onPageChanged: (i) => setState(() => _page = i),
-                  itemBuilder: (context, i) => Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    child: SingleChildScrollView(
-                      child: OutfitCard(outfit: looks[i]),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: OutfitCard(
+                      key: ValueKey(looks[index].signature),
+                      outfit: looks[index],
+                      showScore: true,
                     ),
                   ),
-                ),
+                  if (count > 1)
+                    TextButton.icon(
+                      onPressed: () =>
+                          setState(() => _index = (index + 1) % count),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Otra sugerencia'),
+                    ),
+                ],
               ),
             ),
         ],

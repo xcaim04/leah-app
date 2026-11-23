@@ -59,13 +59,8 @@ class GarmentCard extends StatelessWidget {
                         ),
                       ),
                       Positioned(
-                        left: 8,
-                        top: 8,
-                        child: _CategoryPill(label: garment.category.label),
-                      ),
-                      Positioned(
-                        right: 8,
-                        top: 8,
+                        right: 0,
+                        top: 0,
                         child: _FavoriteButton(
                           favorite: garment.favorite,
                           onTap: onFavoriteToggle,
@@ -123,31 +118,6 @@ class GarmentCard extends StatelessWidget {
   }
 }
 
-class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSecondaryContainer,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
 class _FavoriteButton extends StatelessWidget {
   const _FavoriteButton({required this.favorite, this.onTap});
 
@@ -160,23 +130,32 @@ class _FavoriteButton extends StatelessWidget {
     final label =
         favorite ? 'Quitar de favoritos' : 'Marcar como favorito';
 
-    return Material(
-      color: scheme.surfaceContainerLowest.withValues(alpha: 0.9),
-      shape: const CircleBorder(),
-      child: Tooltip(
-        message: label,
-        child: Semantics(
-          button: true,
-          label: label,
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                favorite ? Icons.favorite : Icons.favorite_border,
-                size: 18,
-                color: favorite ? scheme.primary : scheme.onSurfaceVariant,
+    // 48dp hit area around the 34dp visual circle.
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 24,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLowest.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    favorite ? Icons.favorite : Icons.favorite_border,
+                    size: 18,
+                    color: favorite ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ),

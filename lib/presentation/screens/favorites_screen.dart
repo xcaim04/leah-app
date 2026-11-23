@@ -1,30 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../domain/models/outfit_feedback.dart';
 import '../providers/outfit_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/outfit_card.dart';
-import '../widgets/theme_mode_button.dart';
 
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final outfitsAsync = ref.watch(generatedOutfitsProvider);
-    final ratings = ref.watch(latestRatingsProvider);
+    final outfitsAsync = ref.watch(likedOutfitsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Favoritos'),
-        actions: const [ThemeModeButton(), SizedBox(width: 8)],
-      ),
+      appBar: AppBar(title: const Text('Favoritos')),
       body: outfitsAsync.when(
-        data: (outfits) {
-          final liked = outfits
-              .where((o) => ratings[o.signature] == FeedbackRating.like)
-              .toList();
+        data: (liked) {
           if (liked.isEmpty) {
             return const EmptyState(
               icon: Icons.favorite_border,
@@ -40,7 +31,11 @@ class FavoritesScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error al cargar favoritos: $e')),
+        error: (_, __) => const EmptyState(
+          icon: Icons.error_outline,
+          title: 'No se pudieron cargar los favoritos',
+          message: 'Vuelve a intentarlo en un momento.',
+        ),
       ),
     );
   }

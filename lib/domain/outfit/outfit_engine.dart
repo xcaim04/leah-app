@@ -1,5 +1,7 @@
+import '../color/color_math.dart';
 import '../models/garment.dart';
 import '../models/outfit.dart';
+import 'harmony_rules.dart';
 import 'outfit_explainer.dart';
 import 'outfit_scorer.dart';
 import 'scoring_weights.dart';
@@ -52,7 +54,6 @@ List<Outfit> generate(
   }
 
   for (final dress in dresses) {
-    combos.add([dress]);
     for (final shoe in footwear) {
       combos.add([dress, shoe]);
       for (final coat in outerwear) {
@@ -64,25 +65,41 @@ List<Outfit> generate(
     }
   }
 
-  final outfits = combos
-      .map((items) {
-        final result = scoreWithDetails(items, weights);
-        final explanation = explainOutfit(
-          items,
-          result.dominantHarmony,
-          occasion: occasion ?? items.first.occasion,
-          season: season ?? items.first.season,
-        );
-        return Outfit(
-          garments: items,
-          score: result.score,
-          explanation: explanation,
-        );
-      })
-      .where((o) => !excludedSignatures.contains(o.signature))
-      .toList();
+  final hsl = Map<Garment, HslColor>.identity();
+  for (final g in filtered) {
+    hsl[g] = dominantHsl(g);
+  }
 
-  outfits.sort((a, b) => b.score.compareTo(a.score));
-  if (limit <= 0 || outfits.length <= limit) return outfits;
-  return outfits.sublist(0, limit);
+  // Score everything, but only build explanations for the kept `limit`.
+  final scored = <(Outfit, HarmonyType)>[];
+  for (final items in combos) {
+    final result = scoreWithHsl(items, [
+      for (final g in items) hsl[g]!,
+    ], weights);
+    final outfit = Outfit(
+      garments: items,
+      score: result.score,
+      explanation: '',
+    );
+    if (excludedSignatures.contains(outfit.signature)) continue;
+    scored.add((outfit, result.dominantHarmony));
+  }
+
+  scored.sort((a, b) => b.$1.score.compareTo(a.$1.score));
+  final kept = limit <= 0 || scored.length <= limit
+      ? scored
+      : scored.sublist(0, limit);
+  return [
+    for (final (o, harmony) in kept)
+      Outfit(
+        garments: o.garments,
+        score: o.score,
+        explanation: explainOutfit(
+          o.garments,
+          harmony,
+          occasion: occasion ?? o.garments.first.occasion,
+          season: season ?? o.garments.first.season,
+        ),
+      ),
+  ];
 }

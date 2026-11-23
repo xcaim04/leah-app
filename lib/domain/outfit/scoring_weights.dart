@@ -26,24 +26,4 @@ class ScoringWeights {
   final double similarHuePenalty;
   final double baseScore;
 
-  ScoringWeights copyWith({
-    double? harmonyWeight,
-    double? neutralBonus,
-    double? occasionBonus,
-    double? seasonBonus,
-    double? saturationClashPenalty,
-    double? similarHuePenalty,
-    double? baseScore,
-  }) {
-    return ScoringWeights(
-      harmonyWeight: harmonyWeight ?? this.harmonyWeight,
-      neutralBonus: neutralBonus ?? this.neutralBonus,
-      occasionBonus: occasionBonus ?? this.occasionBonus,
-      seasonBonus: seasonBonus ?? this.seasonBonus,
-      saturationClashPenalty:
-          saturationClashPenalty ?? this.saturationClashPenalty,
-      similarHuePenalty: similarHuePenalty ?? this.similarHuePenalty,
-      baseScore: baseScore ?? this.baseScore,
-    );
-  }
 }

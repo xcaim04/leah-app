@@ -6,7 +6,6 @@ import '../providers/outfit_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/look_of_the_day_section.dart';
 import '../widgets/outfit_card.dart';
-import '../widgets/theme_mode_button.dart';
 
 class OutfitsScreen extends ConsumerWidget {
   const OutfitsScreen({super.key});
@@ -17,10 +16,7 @@ class OutfitsScreen extends ConsumerWidget {
     final outfitsAsync = ref.watch(generatedOutfitsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Looks'),
-        actions: const [ThemeModeButton(), SizedBox(width: 8)],
-      ),
+      appBar: AppBar(title: const Text('Looks')),
       body: CustomScrollView(
         slivers: [
           const SliverToBoxAdapter(child: LookOfTheDaySection()),
@@ -58,10 +54,14 @@ class OutfitsScreen extends ConsumerWidget {
                 child: Center(child: CircularProgressIndicator()),
               ),
             ],
-            error: (e, _) => [
+            error: (_, __) => const [
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: Center(child: Text('Error al generar looks: $e')),
+                child: EmptyState(
+                  icon: Icons.error_outline,
+                  title: 'No se pudieron generar los looks',
+                  message: 'Vuelve a intentarlo en un momento.',
+                ),
               ),
             ],
           ),
@@ -83,50 +83,25 @@ class _FiltersBar extends ConsumerWidget {
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _FilterChip(
-                    label: 'Todas',
-                    selected: filters.occasion == null,
-                    onSelected: (_) => notifier.setOccasion(null),
-                  ),
-                  for (final o in Occasion.values)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: _FilterChip(
-                        label: o.label,
-                        selected: filters.occasion == o,
-                        onSelected: (_) => notifier.setOccasion(o),
-                      ),
-                    ),
-                ],
+            Expanded(
+              child: _FilterDropdown<Occasion>(
+                title: 'Ocasión',
+                values: Occasion.values,
+                selected: filters.occasion,
+                labelOf: (o) => o.label,
+                onSelected: notifier.setOccasion,
               ),
             ),
-            const SizedBox(height: 6),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _FilterChip(
-                    label: 'Todas',
-                    selected: filters.season == null,
-                    onSelected: (_) => notifier.setSeason(null),
-                  ),
-                  for (final s in Season.values)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: _FilterChip(
-                        label: s.label,
-                        selected: filters.season == s,
-                        onSelected: (_) => notifier.setSeason(s),
-                      ),
-                    ),
-                ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: _FilterDropdown<Season>(
+                title: 'Temporada',
+                values: Season.values,
+                selected: filters.season,
+                labelOf: (s) => s.label,
+                onSelected: notifier.setSeason,
               ),
             ),
           ],
@@ -136,25 +111,53 @@ class _FiltersBar extends ConsumerWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
+    required this.title,
+    required this.values,
     required this.selected,
+    required this.labelOf,
     required this.onSelected,
   });
 
-  final String label;
-  final bool selected;
-  final ValueChanged<bool> onSelected;
+  final String title;
+  final List<T> values;
+  final T? selected;
+  final String Function(T) labelOf;
+  final ValueChanged<T?> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: onSelected,
-      showCheckmark: false,
-      visualDensity: VisualDensity.compact,
+    final check = const Icon(Icons.check);
+    MenuItemButton item(String label, T? value) => MenuItemButton(
+      leadingIcon: selected == value ? check : const SizedBox(width: 24),
+      onPressed: () => onSelected(value),
+      child: Text(label),
+    );
+
+    return MenuAnchor(
+      menuChildren: [
+        item('Todas', null),
+        for (final v in values) item(labelOf(v), v),
+      ],
+      builder: (context, controller, _) => OutlinedButton(
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                // Bare title when unfiltered: "Temporada: Todas" doesn't fit on phones.
+                selected == null ? title : labelOf(selected as T),
+                semanticsLabel:
+                    '$title: ${selected == null ? 'Todas' : labelOf(selected as T)}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.expand_more),
+          ],
+        ),
+      ),
     );
   }
 }

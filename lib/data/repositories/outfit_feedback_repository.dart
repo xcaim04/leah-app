@@ -37,13 +37,17 @@ class OutfitFeedbackRepository {
     await db.delete(table, where: 'signature = ?', whereArgs: [signature]);
   }
 
-  Future<Map<String, FeedbackRating>> latestRatingBySignature() async {
-    final all = await getAll();
-    final result = <String, FeedbackRating>{};
-    for (final feedback in all) {
-      result.putIfAbsent(feedback.signature, () => feedback.rating);
-    }
-    return result;
+  /// Swaps any previous votes for this look with [feedback] atomically.
+  Future<void> replace(OutfitFeedback feedback) async {
+    final db = await _database.database;
+    await db.transaction((txn) async {
+      await txn.delete(
+        table,
+        where: 'signature = ?',
+        whereArgs: [feedback.signature],
+      );
+      await txn.insert(table, feedback.toMap());
+    });
   }
 
   Future<int> count() async {

@@ -26,7 +26,7 @@ class ImageStorageHelper {
   static final Random _random = Random();
 
   /// Compressed output is always JPEG, so the stored extension is always .jpg.
-  static String extensionFromPath(String sourcePath) => '.jpg';
+  static const fileExtension = '.jpg';
 
   static String generateBaseName({DateTime? now, int? randomValue}) {
     final time = now ?? DateTime.now();
@@ -34,12 +34,8 @@ class ImageStorageHelper {
     return '${time.microsecondsSinceEpoch}_$random';
   }
 
-  static ImageFileNames buildFileNames(
-    String sourcePath, {
-    DateTime? now,
-    int? randomValue,
-  }) {
-    final ext = extensionFromPath(sourcePath);
+  static ImageFileNames buildFileNames({DateTime? now, int? randomValue}) {
+    const ext = fileExtension;
     final base = generateBaseName(now: now, randomValue: randomValue);
     return ImageFileNames(photoName: '$base$ext', thumbName: '${base}_thumb$ext');
   }
@@ -68,7 +64,7 @@ class ImageStorage {
       await photosDir.create(recursive: true);
       await thumbsDir.create(recursive: true);
 
-      final names = ImageStorageHelper.buildFileNames(sourcePath);
+      final names = ImageStorageHelper.buildFileNames();
       final photoTarget = p.join(photosDir.path, names.photoName);
       final thumbTarget = p.join(thumbsDir.path, names.thumbName);
 

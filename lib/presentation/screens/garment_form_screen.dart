@@ -82,8 +82,10 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     }
 
     setState(() => _saving = true);
+    final imageStorage = ref.read(imageStorageProvider);
+    ({String photoPath, String thumbPath})? saved;
+    var dbWritten = false;
     try {
-      final imageStorage = ref.read(imageStorageProvider);
       final paletteExtractor = ref.read(paletteExtractorProvider);
       final repository = ref.read(garmentRepositoryProvider);
 
@@ -92,19 +94,13 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       var colors = widget.garment?.colors ?? const [];
 
       if (_pickedImagePath != null) {
-        final saved = await imageStorage.save(_pickedImagePath!);
-        photoPath = saved.photoPath;
-        thumbPath = saved.thumbPath;
+        final stored = saved = await imageStorage.save(_pickedImagePath!);
+        photoPath = stored.photoPath;
+        thumbPath = stored.thumbPath;
         try {
           colors = await paletteExtractor.extract(photoPath);
         } catch (_) {
           colors = const [];
-        }
-        if (_isEditing) {
-          await imageStorage.delete(
-            widget.garment!.photoPath,
-            widget.garment!.thumbPath,
-          );
         }
       } else {
         photoPath = widget.garment!.photoPath;
@@ -141,14 +137,32 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         );
         await repository.insert(garment);
       }
+      dbWritten = true;
+      // Best-effort: the DB already points at the new files, so a leftover old file is harmless.
+      if (_isEditing && saved != null) {
+        try {
+          await imageStorage.delete(
+            widget.garment!.photoPath,
+            widget.garment!.thumbPath,
+          );
+        } catch (_) {}
+      }
 
       ref.invalidate(garmentsProvider);
       if (!mounted) return;
       Navigator.of(context).pop(true);
-    } catch (e) {
+    } catch (_) {
+      // Don't leave the new photo files orphaned when the DB write never happened.
+      if (saved != null && !dbWritten) {
+        try {
+          await imageStorage.delete(saved.photoPath, saved.thumbPath);
+        } catch (_) {}
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo guardar la prenda: $e')),
+        const SnackBar(
+          content: Text('No se pudo guardar la prenda. Inténtalo de nuevo.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -360,8 +374,7 @@ class _PhotoHero extends StatelessWidget {
                     ),
                     child: Text(
                       'Foto principal',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: scheme.onSurface,
                       ),
@@ -417,7 +430,8 @@ class _PhotoAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Material(
       color: scheme.surfaceContainerLowest.withValues(alpha: 0.95),
       shape: const StadiumBorder(),
@@ -433,8 +447,7 @@ class _PhotoAction extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 13,
+                style: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),

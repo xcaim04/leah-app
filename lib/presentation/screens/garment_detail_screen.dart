@@ -21,7 +21,9 @@ class GarmentDetailScreen extends ConsumerWidget {
       ),
       error: (error, _) => Scaffold(
         appBar: AppBar(),
-        body: Center(child: Text('Error: $error')),
+        body: const Center(
+          child: Text('No se pudo cargar la prenda. Inténtalo de nuevo.'),
+        ),
       ),
       data: (items) {
         Garment? garment;
@@ -114,7 +116,9 @@ class _GarmentDetailBody extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo eliminar: $e')),
+          const SnackBar(
+            content: Text('No se pudo eliminar la prenda. Inténtalo de nuevo.'),
+          ),
         );
       }
     }
@@ -141,6 +145,26 @@ class _GarmentDetailBody extends ConsumerWidget {
                 ? 'Quitar de favoritos'
                 : 'Marcar como favorito',
             onPressed: () => _toggleFavorite(context, ref),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Más opciones',
+            onSelected: (_) => _delete(context, ref),
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: scheme.error),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Eliminar prenda',
+                      style: TextStyle(color: scheme.error),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -177,8 +201,7 @@ class _GarmentDetailBody extends ConsumerWidget {
                         ),
                         child: Text(
                           garment.category.label.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
+                          style: theme.textTheme.labelSmall?.copyWith(
                             letterSpacing: 0.6,
                             fontWeight: FontWeight.w600,
                             color: scheme.onSecondaryContainer,
@@ -310,16 +333,6 @@ class _GarmentDetailBody extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Row(
             children: [
-              Material(
-                color: scheme.surfaceContainerHigh,
-                shape: const CircleBorder(),
-                child: IconButton(
-                  onPressed: () => _delete(context, ref),
-                  tooltip: 'Eliminar prenda',
-                  icon: Icon(Icons.delete_outline, color: scheme.tertiary),
-                ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
                   onPressed: () => _edit(context),

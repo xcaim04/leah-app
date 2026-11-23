@@ -1,19 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/outfit_providers.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/outfits_screen.dart';
 import '../screens/wardrobe_screen.dart';
 
 /// Root scaffold with the bottom navigation bar.
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // The look of the day depends on today's date; refresh after midnight.
+    _lifecycle = AppLifecycleListener(
+      onResume: () => ref.invalidate(lookOfTheDayProvider),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
 
   static const List<Widget> _screens = [
     WardrobeScreen(),

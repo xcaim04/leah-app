@@ -3,16 +3,13 @@ import 'package:mi_armario/data/services/image_storage.dart';
 
 void main() {
   group('ImageStorageHelper', () {
-    test('extensionFromPath always returns jpg (output is jpeg)', () {
-      expect(ImageStorageHelper.extensionFromPath('/tmp/photo.JPEG'), '.jpg');
-      expect(ImageStorageHelper.extensionFromPath('/tmp/photo.png'), '.jpg');
-      expect(ImageStorageHelper.extensionFromPath('/tmp/photo'), '.jpg');
+    test('stored extension is always jpg (output is jpeg)', () {
+      expect(ImageStorageHelper.fileExtension, '.jpg');
     });
 
     test('buildFileNames creates unique names with preserved extension', () {
       final now = DateTime(2026, 1, 2, 3, 4, 5, 6);
       final names = ImageStorageHelper.buildFileNames(
-        '/tmp/image.jpeg',
         now: now,
         randomValue: 42,
       );

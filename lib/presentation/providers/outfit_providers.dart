@@ -5,6 +5,7 @@ import '../../data/services/weather_service.dart';
 import '../../domain/models/garment.dart';
 import '../../domain/models/outfit.dart';
 import '../../domain/models/outfit_feedback.dart';
+import '../../domain/outfit/liked_outfits.dart';
 import '../../domain/outfit/outfit_engine.dart' as engine;
 import '../../domain/outfit/scoring_weights.dart';
 import '../../domain/outfit/weight_learning.dart';
@@ -16,16 +17,6 @@ class OutfitFilters {
 
   final Occasion? occasion;
   final Season? season;
-
-  OutfitFilters copyWith({
-    Occasion? Function()? occasion,
-    Season? Function()? season,
-  }) {
-    return OutfitFilters(
-      occasion: occasion != null ? occasion() : this.occasion,
-      season: season != null ? season() : this.season,
-    );
-  }
 }
 
 class OutfitFiltersNotifier extends StateNotifier<OutfitFilters> {
@@ -75,6 +66,17 @@ final generatedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
       excludedSignatures: disliked,
     ),
   );
+});
+
+/// Every look currently liked, independent of the Looks tab's filters/top-N.
+final likedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
+  final weights = ref.watch(scoringWeightsProvider);
+  final feedback =
+      ref.watch(outfitFeedbackProvider).asData?.value ??
+      const <OutfitFeedback>[];
+  return ref
+      .watch(garmentsProvider)
+      .whenData((garments) => likedOutfits(feedback, garments, weights));
 });
 
 /// Signatures of looks she disliked; never suggested again.
@@ -142,8 +144,7 @@ class OutfitFeedbackController {
       rating: rating,
       createdAt: DateTime.now(),
     );
-    await repository.deleteBySignature(outfit.signature);
-    await repository.insert(feedback);
+    await repository.replace(feedback);
     _ref.invalidate(outfitFeedbackProvider);
   }
 }

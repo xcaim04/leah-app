@@ -76,26 +76,18 @@ void main() {
     expect(await repository.count(), 1);
   });
 
-  test('latestRatingBySignature returns most recent rating per signature', () async {
-    await repository.insert(buildFeedback(
-      signature: '1-2',
-      rating: FeedbackRating.like,
-      createdAt: DateTime(2026, 1, 1),
-    ));
-    await repository.insert(buildFeedback(
+  test('replace swaps previous votes for the signature', () async {
+    await repository.insert(buildFeedback(signature: '1-2'));
+    await repository.insert(buildFeedback(signature: '3-4', garmentIds: const [3, 4]));
+
+    await repository.replace(buildFeedback(
       signature: '1-2',
       rating: FeedbackRating.dislike,
-      createdAt: DateTime(2026, 1, 3),
-    ));
-    await repository.insert(buildFeedback(
-      signature: '3-4',
-      garmentIds: const [3, 4],
-      rating: FeedbackRating.like,
-      createdAt: DateTime(2026, 1, 2),
     ));
 
-    final latest = await repository.latestRatingBySignature();
-    expect(latest['1-2'], FeedbackRating.dislike);
-    expect(latest['3-4'], FeedbackRating.like);
+    final rows = await repository.getBySignature('1-2');
+    expect(rows, hasLength(1));
+    expect(rows.single.rating, FeedbackRating.dislike);
+    expect(await repository.count(), 2);
   });
 }

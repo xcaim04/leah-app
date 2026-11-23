@@ -49,10 +49,10 @@ HarmonyResult classifyHarmony(HslColor a, HslColor b) {
     final penalty = highSat && satDiff < 0.15 ? 0.1 : 0.0;
     return HarmonyResult(HarmonyType.analogous, 0.82 - penalty);
   }
-  if (dist >= 150 && dist <= 210) {
+  if (dist >= 150) {
     return const HarmonyResult(HarmonyType.complementary, 0.88);
   }
-  if ((dist >= 100 && dist <= 140) || (dist >= 220 && dist <= 260)) {
+  if (dist >= 100 && dist <= 140) {
     return const HarmonyResult(HarmonyType.triad, 0.8);
   }
   if (dist < 60 && sameSatPair) {
@@ -62,4 +62,35 @@ HarmonyResult classifyHarmony(HslColor a, HslColor b) {
     return const HarmonyResult(HarmonyType.clash, 0.35);
   }
   return const HarmonyResult(HarmonyType.clash, 0.45);
+}
+
+/// Per-pair harmony tallies shared by the scorer and weight learning.
+class PairStats {
+  double harmonySum = 0;
+  int pairs = 0;
+  int clash = 0;
+  int neutral = 0;
+  int similarHue = 0;
+  final Map<HarmonyType, int> typeCounts = {};
+}
+
+PairStats pairStats(List<HslColor> colors) {
+  final stats = PairStats();
+  for (var i = 0; i < colors.length; i++) {
+    for (var j = i + 1; j < colors.length; j++) {
+      final a = colors[i];
+      final b = colors[j];
+      final result = classifyHarmony(a, b);
+      stats.harmonySum += result.score;
+      stats.pairs++;
+      stats.typeCounts[result.type] = (stats.typeCounts[result.type] ?? 0) + 1;
+      if (result.type == HarmonyType.clash) stats.clash++;
+      if (result.type == HarmonyType.neutral) stats.neutral++;
+      final dist = hueDistance(a.hue, b.hue);
+      if (!isNeutral(a) && !isNeutral(b) && dist >= 15 && dist < 30) {
+        stats.similarHue++;
+      }
+    }
+  }
+  return stats;
 }

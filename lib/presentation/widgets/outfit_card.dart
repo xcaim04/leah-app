@@ -13,22 +13,28 @@ class OutfitCard extends ConsumerWidget {
     super.key,
     required this.outfit,
     this.showFeedback = true,
+    this.showScore = false,
   });
 
   final Outfit outfit;
   final bool showFeedback;
+  final bool showScore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final scorePct = (outfit.score * 100).round();
-    final ratings = ref.watch(latestRatingsProvider);
-    final rating = ratings[outfit.signature];
+    final liked =
+        ref.watch(latestRatingsProvider)[outfit.signature] ==
+        FeedbackRating.like;
     final controller = ref.read(feedbackControllerProvider);
 
+    void snack(String message) => ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(24),
@@ -43,65 +49,84 @@ class OutfitCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Stack(
             children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final g in outfit.garments) _GarmentThumb(garment: g),
+              Row(
+                children: [
+                  for (final (i, g) in outfit.garments.indexed) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(child: _GarmentImage(garment: g)),
                   ],
-                ),
+                ],
               ),
-              const SizedBox(width: 8),
-              _ScoreBadge(scorePct: scorePct),
+              if (showScore)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _ScoreBadge(scorePct: (outfit.score * 100).round()),
+                ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             outfit.explanation,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,
               height: 1.4,
             ),
           ),
-          if (showFeedback) ...[
-            const SizedBox(height: 8),
+          if (showFeedback)
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _FeedbackButton(
-                  tooltip: 'Me gusta',
-                  icon: rating == FeedbackRating.like
-                      ? Icons.thumb_up
-                      : Icons.thumb_up_outlined,
-                  active: rating == FeedbackRating.like,
-                  activeColor: scheme.primary,
-                  onPressed: () => controller.like(outfit),
+                IconButton(
+                  tooltip: liked
+                      ? 'En favoritos'
+                      : 'Guardar en favoritos',
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
+                  icon: Icon(
+                    liked ? Icons.favorite : Icons.favorite_border,
+                    color: liked ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+                  // No neutral rating API: un-liking would need a dislike,
+                  // which hides the look forever, so just inform.
+                  onPressed: liked
+                      ? () => snack('Ya está en favoritos')
+                      : () => controller.like(outfit),
                 ),
-                const SizedBox(width: 4),
-                _FeedbackButton(
-                  tooltip: 'No me gusta',
-                  icon: rating == FeedbackRating.dislike
-                      ? Icons.thumb_down
-                      : Icons.thumb_down_outlined,
-                  active: rating == FeedbackRating.dislike,
-                  activeColor: scheme.error,
-                  onPressed: () => controller.dislike(outfit),
+                PopupMenuButton<void>(
+                  tooltip: 'Más opciones',
+                  icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                  constraints: const BoxConstraints(minWidth: 48),
+                  itemBuilder: (context) => [
+                    PopupMenuItem<void>(
+                      onTap: () {
+                        controller.dislike(outfit);
+                        snack('No volveremos a sugerir este look');
+                      },
+                      child: const ListTile(
+                        leading: Icon(Icons.block),
+                        title: Text('No sugerir más'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _GarmentThumb extends StatelessWidget {
-  const _GarmentThumb({required this.garment});
+class _GarmentImage extends StatelessWidget {
+  const _GarmentImage({required this.garment});
 
   final Garment garment;
 
@@ -110,63 +135,20 @@ class _GarmentThumb extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: garment.category.label,
-      child: Container(
-        width: 58,
-        height: 72,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Image.file(
-          File(garment.thumbPath),
-          fit: BoxFit.cover,
-          cacheWidth: 240,
-          errorBuilder: (context, error, stackTrace) => Icon(
-            Icons.checkroom_outlined,
-            color: scheme.onSurfaceVariant,
+      child: AspectRatio(
+        aspectRatio: 3 / 4,
+        child: Container(
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeedbackButton extends StatelessWidget {
-  const _FeedbackButton({
-    required this.tooltip,
-    required this.icon,
-    required this.active,
-    required this.activeColor,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final bool active;
-  final Color activeColor;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: active
-          ? activeColor.withValues(alpha: 0.12)
-          : scheme.surfaceContainer,
-      shape: const StadiumBorder(),
-      child: Tooltip(
-        message: tooltip,
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.all(9),
-            child: Icon(
-              icon,
-              size: 18,
-              color: active ? activeColor : scheme.onSurfaceVariant,
-            ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.file(
+            File(garment.thumbPath),
+            fit: BoxFit.cover,
+            cacheWidth: 400,
+            errorBuilder: (context, error, stackTrace) =>
+                Icon(Icons.checkroom_outlined, color: scheme.onSurfaceVariant),
           ),
         ),
       ),

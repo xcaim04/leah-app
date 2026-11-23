@@ -12,10 +12,6 @@ extension GarmentCategoryX on GarmentCategory {
         GarmentCategory.outerwear => 'Abrigo',
         GarmentCategory.accessory => 'Accesorio',
       };
-
-  /// Whether this category can act as the lower half of an outfit.
-  bool get isLowerLayer =>
-      this == GarmentCategory.bottom || this == GarmentCategory.footwear;
 }
 
 /// Context in which a garment is meant to be worn.

@@ -145,6 +145,30 @@ void main() {
       }
     });
 
+    test('limited results equal the top of the full list, explained', () {
+      final garments = [
+        g(id: 1, category: GarmentCategory.top, color: blue),
+        g(id: 2, category: GarmentCategory.top, color: red),
+        g(id: 3, category: GarmentCategory.bottom, color: white),
+        g(id: 4, category: GarmentCategory.bottom, color: cyan),
+        g(id: 5, category: GarmentCategory.footwear, color: green),
+        g(id: 6, category: GarmentCategory.outerwear, color: red),
+        g(id: 7, category: GarmentCategory.dress, color: blue),
+      ];
+      final all = generate(garments, limit: 0);
+      final top = generate(garments, limit: 5);
+      expect(top, hasLength(5));
+      expect(
+        top.map((o) => (o.signature, o.score)),
+        all.take(5).map((o) => (o.signature, o.score)),
+      );
+      for (final o in all) {
+        expect(o.explanation, isNotEmpty);
+        // A dress alone scored 0 and was never a real look.
+        expect(o.garments.length, greaterThanOrEqualTo(2));
+      }
+    });
+
     test('harmony affects score (complementary vs clash context)', () {
       final complementary = generate([
         g(id: 1, category: GarmentCategory.top, color: red),
