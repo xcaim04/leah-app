@@ -8,7 +8,7 @@ String explainOutfit(
   Occasion? occasion,
   Season? season,
 }) {
-  final names = garments.map((g) => _colorName(dominantHsl(g))).toList();
+  final names = garments.map((g) => colorName(dominantHsl(g))).toList();
   final pair = _pairText(names);
   final harmonyText = switch (harmony) {
     HarmonyType.neutral => '$pair combinan con neutros que equilibran el look',
@@ -43,7 +43,7 @@ String _contextText(Occasion? occasion, Season? season) {
   return parts.join(' ');
 }
 
-String _colorName(HslColor color) {
+String colorName(HslColor color) {
   if (color.lightness < 0.12) return 'negro';
   if (color.lightness > 0.92) return 'blanco';
   if (color.saturation < 0.15) {

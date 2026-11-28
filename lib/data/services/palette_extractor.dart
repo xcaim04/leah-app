@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/painting.dart';
 import 'package:palette_generator/palette_generator.dart';
@@ -6,9 +6,9 @@ import 'package:palette_generator/palette_generator.dart';
 import '../../domain/models/garment_color.dart';
 
 class PaletteExtractor {
-  Future<List<GarmentColor>> extract(String imagePath) async {
+  Future<List<GarmentColor>> extract(Uint8List imageBytes) async {
     final generator = await PaletteGenerator.fromImageProvider(
-      FileImage(File(imagePath)),
+      MemoryImage(imageBytes),
       maximumColorCount: 16,
     );
 

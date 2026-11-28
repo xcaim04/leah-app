@@ -6,6 +6,7 @@ import '../providers/outfit_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/look_of_the_day_section.dart';
 import '../widgets/outfit_card.dart';
+import '../widgets/responsive.dart';
 
 class OutfitsScreen extends ConsumerWidget {
   const OutfitsScreen({super.key});
@@ -19,7 +20,9 @@ class OutfitsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Looks')),
       body: CustomScrollView(
         slivers: [
-          const SliverToBoxAdapter(child: LookOfTheDaySection()),
+          const SliverToBoxAdapter(
+            child: ContentWidth(maxWidth: 1280, child: LookOfTheDaySection()),
+          ),
           SliverToBoxAdapter(child: _FiltersBar(filters: filters)),
           ...outfitsAsync.when(
             data: (outfits) {
@@ -36,17 +39,7 @@ class OutfitsScreen extends ConsumerWidget {
                   ),
                 ];
               }
-              return [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  sliver: SliverList.separated(
-                    itemCount: outfits.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
-                    itemBuilder: (context, index) =>
-                        OutfitCard(outfit: outfits[index]),
-                  ),
-                ),
-              ];
+              return [SliverOutfitGrid(outfits: outfits)];
             },
             loading: () => const [
               SliverFillRemaining(
@@ -83,28 +76,37 @@ class _FiltersBar extends ConsumerWidget {
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: _FilterDropdown<Occasion>(
-                title: 'Ocasión',
-                values: Occasion.values,
-                selected: filters.occasion,
-                labelOf: (o) => o.label,
-                onSelected: notifier.setOccasion,
+        child: ContentWidth(
+          maxWidth: 1280,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _FilterDropdown<Occasion>(
+                      title: 'Ocasión',
+                      values: Occasion.values,
+                      selected: filters.occasion,
+                      labelOf: (o) => o.label,
+                      onSelected: notifier.setOccasion,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _FilterDropdown<Season>(
+                      title: 'Temporada',
+                      values: Season.values,
+                      selected: filters.season,
+                      labelOf: (s) => s.label,
+                      onSelected: notifier.setSeason,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _FilterDropdown<Season>(
-                title: 'Temporada',
-                values: Season.values,
-                selected: filters.season,
-                labelOf: (s) => s.label,
-                onSelected: notifier.setSeason,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

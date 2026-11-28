@@ -42,3 +42,6 @@ Thumbs.db
 
 # Downloaded CI APK artifacts
 /mi-armario-apk-*/
+
+# Downloaded APKs from CI (not versioned)
+/outputs/

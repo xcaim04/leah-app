@@ -5,6 +5,7 @@ import '../../domain/today/cuban_holidays.dart';
 import '../../domain/today/look_of_the_day.dart';
 import '../providers/outfit_providers.dart';
 import 'outfit_card.dart';
+import 'responsive.dart';
 
 /// "Look del día": suggestions for today's weather and day type.
 class LookOfTheDaySection extends ConsumerStatefulWidget {
@@ -26,6 +27,87 @@ class _LookOfTheDaySectionState extends ConsumerState<LookOfTheDaySection> {
     final count = looks?.length ?? 0;
     final index = count == 0 ? 0 : _index.clamp(0, count - 1);
 
+    final title = Semantics(
+      header: true,
+      child: Text(
+        'Look del día',
+        style: theme.textTheme.titleLarge?.copyWith(
+          color: scheme.primary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+    final counter = count > 1
+        ? Semantics(
+            label: 'Sugerencia ${index + 1} de $count',
+            excludeSemantics: true,
+            child: Text(
+              '${index + 1} / $count',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          )
+        : null;
+    final another = count > 1
+        ? TextButton.icon(
+            onPressed: () => setState(() => _index = (index + 1) % count),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Otra sugerencia'),
+          )
+        : null;
+    final card = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: looks == null || looks.isEmpty
+          ? null
+          : OutfitCard(
+              key: ValueKey(looks[index].signature),
+              outfit: looks[index],
+              showScore: true,
+            ),
+    );
+    final wide = Breakpoints.isExpanded(context);
+
+    if (wide && looks != null && looks.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(
+              flex: 0,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: card,
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    title,
+                    const SizedBox(height: 8),
+                    const _TodayHeader(),
+                    if (counter != null) ...[
+                      const SizedBox(height: 12),
+                      counter,
+                    ],
+                    if (another != null) ...[
+                      const SizedBox(height: 4),
+                      another,
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 8),
       child: Column(
@@ -35,29 +117,8 @@ class _LookOfTheDaySectionState extends ConsumerState<LookOfTheDaySection> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      'Look del día',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                if (count > 1)
-                  Semantics(
-                    label: 'Sugerencia ${index + 1} de $count',
-                    excludeSemantics: true,
-                    child: Text(
-                      '${index + 1} / $count',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
+                Expanded(child: title),
+                if (counter != null) counter,
               ],
             ),
           ),
@@ -83,25 +144,7 @@ class _LookOfTheDaySectionState extends ConsumerState<LookOfTheDaySection> {
           else
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: OutfitCard(
-                      key: ValueKey(looks[index].signature),
-                      outfit: looks[index],
-                      showScore: true,
-                    ),
-                  ),
-                  if (count > 1)
-                    TextButton.icon(
-                      onPressed: () =>
-                          setState(() => _index = (index + 1) % count),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Otra sugerencia'),
-                    ),
-                ],
-              ),
+              child: Column(children: [card, if (another != null) another]),
             ),
         ],
       ),

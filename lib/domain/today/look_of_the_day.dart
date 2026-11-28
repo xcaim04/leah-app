@@ -74,6 +74,7 @@ List<Outfit> lookOfTheDay(
   Weather? weather,
   ScoringWeights weights = const ScoringWeights.defaults(),
   Set<String> excludedSignatures = const {},
+  Set<int> recentlyWorn = const {},
   int limit = 10,
 }) {
   final season = weather?.season ?? Season.summer;
@@ -84,6 +85,7 @@ List<Outfit> lookOfTheDay(
     weights: weights,
     limit: limit * 2,
     excludedSignatures: excludedSignatures,
+    recentlyWorn: recentlyWorn,
   );
 
   var outfits = run(preferredOccasion(dayTypeFor(date)));

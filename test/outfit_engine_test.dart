@@ -185,4 +185,64 @@ void main() {
       expect(neutral.first.score, lessThan(1));
     });
   });
+
+  group('recently worn', () {
+    test('penalty drops a recently worn look below an equal one', () {
+      final garments = [
+        g(id: 1, category: GarmentCategory.top, color: blue),
+        g(id: 2, category: GarmentCategory.bottom, color: white),
+        g(id: 3, category: GarmentCategory.bottom, color: white),
+      ];
+      final fresh = generate(garments);
+      expect(fresh[0].score, fresh[1].score);
+
+      final outfits = generate(garments, recentlyWorn: {2});
+      expect(outfits.first.signature, '1-3');
+      expect(outfits.last.signature, '1-2');
+      expect(
+        outfits.last.score,
+        closeTo(fresh.first.score - recentlyWornPenalty, 1e-9),
+      );
+    });
+  });
+
+  group('accessories', () {
+    test('adds the accessory when it improves the look', () {
+      final outfits = generate([
+        g(id: 1, category: GarmentCategory.top, color: red),
+        g(id: 2, category: GarmentCategory.bottom, color: green),
+        g(id: 3, category: GarmentCategory.accessory, color: white),
+      ]);
+      final base = generate([
+        g(id: 1, category: GarmentCategory.top, color: red),
+        g(id: 2, category: GarmentCategory.bottom, color: green),
+      ]).single;
+      final look = outfits.single;
+      expect(look.signature, '1-2-3');
+      expect(look.score, greaterThan(base.score));
+      expect(look.explanation, isNotEmpty);
+    });
+
+    test('skips an accessory that would lower the score', () {
+      final outfits = generate([
+        g(id: 1, category: GarmentCategory.top, color: red),
+        g(id: 2, category: GarmentCategory.bottom, color: white),
+        g(
+          id: 3,
+          category: GarmentCategory.accessory,
+          color: green,
+          occasion: Occasion.party,
+        ),
+      ]);
+      expect(outfits.single.signature, '1-2');
+    });
+
+    test('accessories are never a look on their own', () {
+      final outfits = generate([
+        g(id: 1, category: GarmentCategory.accessory, color: red),
+        g(id: 2, category: GarmentCategory.accessory, color: white),
+      ]);
+      expect(outfits, isEmpty);
+    });
+  });
 }

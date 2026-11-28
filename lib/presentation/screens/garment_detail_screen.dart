@@ -1,10 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/garment.dart';
 import '../providers/providers.dart';
+import '../widgets/garment_image.dart';
+import '../widgets/responsive.dart';
 import 'garment_form_screen.dart';
 
 class GarmentDetailScreen extends ConsumerWidget {
@@ -16,9 +16,8 @@ class GarmentDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final garmentsAsync = ref.watch(garmentsProvider);
     return garmentsAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(
         appBar: AppBar(),
         body: const Center(
@@ -67,16 +66,16 @@ class _GarmentDetailBody extends ConsumerWidget {
 
   Future<void> _edit(BuildContext context) async {
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => GarmentFormScreen(garment: garment),
-      ),
+      MaterialPageRoute(builder: (_) => GarmentFormScreen(garment: garment)),
     );
   }
 
   Future<void> _toggleFavorite(BuildContext context, WidgetRef ref) async {
     final id = garment.id;
     if (id == null) return;
-    await ref.read(garmentRepositoryProvider).setFavorite(id, !garment.favorite);
+    await ref
+        .read(garmentRepositoryProvider)
+        .setFavorite(id, !garment.favorite);
     ref.invalidate(garmentsProvider);
   }
 
@@ -108,6 +107,8 @@ class _GarmentDetailBody extends ConsumerWidget {
       final removed = await repository.deleteById(id);
       if (removed != null) {
         await imageStorage.delete(removed.photoPath, removed.thumbPath);
+        ref.invalidate(imageBytesProvider(removed.photoPath));
+        ref.invalidate(imageBytesProvider(removed.thumbPath));
       }
       ref.invalidate(garmentsProvider);
       if (context.mounted) {
@@ -131,6 +132,164 @@ class _GarmentDetailBody extends ConsumerWidget {
     final created = garment.createdAt;
     final addedLabel =
         'Añadido el ${created.day} de ${_months[created.month - 1]}';
+
+    final wide = Breakpoints.isExpanded(context);
+    // Viewport minus app bar and the page's vertical padding.
+    final maxPhotoHeight =
+        (MediaQuery.sizeOf(context).height - kToolbarHeight - 48).clamp(
+          240.0,
+          double.infinity,
+        );
+    final editButton = FilledButton.icon(
+      onPressed: () => _edit(context),
+      icon: const Icon(Icons.edit_outlined),
+      label: const Text('Editar prenda'),
+    );
+    Widget photo(double aspectRatio) => ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: AspectRatio(
+        aspectRatio: aspectRatio,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GarmentImage(imageId: garment.photoPath, cacheWidth: 1200),
+            Positioned(
+              left: 14,
+              top: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  garment.category.label.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    final info = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(garment.category.label, style: theme.textTheme.headlineLarge),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 14,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text(addedLabel, style: theme.textTheme.bodySmall),
+          ],
+        ),
+        if (garment.colors.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Text(
+            'PALETA EXTRAÍDA',
+            style: theme.textTheme.labelSmall?.copyWith(
+              letterSpacing: 1.1,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: garment.colors
+                .map(
+                  (c) => Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Color.fromARGB(255, c.red, c.green, c.blue),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: scheme.outlineVariant),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: _SpecCard(
+                icon: Icons.celebration_outlined,
+                iconBg: scheme.primaryFixed,
+                iconColor: scheme.primary,
+                label: 'Ocasión',
+                value: garment.occasion.label,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SpecCard(
+                icon: Icons.calendar_today_outlined,
+                iconBg: scheme.secondaryContainer,
+                iconColor: scheme.onSecondaryContainer,
+                label: 'Temporada',
+                value: garment.season.label,
+              ),
+            ),
+          ],
+        ),
+        if (garment.notes != null && garment.notes!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: scheme.primary.withValues(alpha: 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.edit_note, size: 20, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Detalles y cuidados',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  garment.notes!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -168,182 +327,60 @@ class _GarmentDetailBody extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: AspectRatio(
-                aspectRatio: 4 / 5,
-                child: Stack(
-                  fit: StackFit.expand,
+      body: wide
+          // Scroll view outside the width cap so the wheel works over the margins too.
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ContentWidth(
+                maxWidth: 1100,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.file(
-                      File(garment.photoPath),
-                      fit: BoxFit.cover,
-                      cacheWidth: 1200,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: scheme.surfaceContainerHighest,
-                        child: const Icon(Icons.broken_image_outlined, size: 48),
+                    Expanded(
+                      flex: 5,
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: maxPhotoHeight,
+                          ),
+                          child: photo(3 / 4),
+                        ),
                       ),
                     ),
-                    Positioned(
-                      left: 14,
-                      top: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: scheme.secondaryContainer,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          garment.category.label.toUpperCase(),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            letterSpacing: 0.6,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSecondaryContainer,
-                          ),
-                        ),
+                    const SizedBox(width: 32),
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          info,
+                          const SizedBox(height: 24),
+                          editButton,
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            )
+          : ListView(
+              padding: EdgeInsets.zero,
               children: [
-                Text(garment.category.label,
-                    style: theme.textTheme.headlineLarge),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        size: 14, color: scheme.onSurfaceVariant),
-                    const SizedBox(width: 6),
-                    Text(addedLabel, style: theme.textTheme.bodySmall),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: photo(4 / 5),
                 ),
-                if (garment.colors.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  Text(
-                    'PALETA EXTRAÍDA',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      letterSpacing: 1.1,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: garment.colors
-                        .map(
-                          (c) => Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: Color.fromARGB(255, c.red, c.green, c.blue),
-                              shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: scheme.outlineVariant),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SpecCard(
-                        icon: Icons.celebration_outlined,
-                        iconBg: scheme.primaryFixed,
-                        iconColor: scheme.primary,
-                        label: 'Ocasión',
-                        value: garment.occasion.label,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _SpecCard(
-                        icon: Icons.calendar_today_outlined,
-                        iconBg: scheme.secondaryContainer,
-                        iconColor: scheme.onSecondaryContainer,
-                        label: 'Temporada',
-                        value: garment.season.label,
-                      ),
-                    ),
-                  ],
-                ),
-                if (garment.notes != null && garment.notes!.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: scheme.primary.withValues(alpha: 0.05),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.edit_note,
-                                size: 20, color: scheme.primary),
-                            const SizedBox(width: 8),
-                            Text('Detalles y cuidados',
-                                style: theme.textTheme.labelLarge),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          garment.notes!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                Padding(padding: const EdgeInsets.all(16), child: info),
               ],
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => _edit(context),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Editar prenda'),
-                ),
+      bottomNavigationBar: wide
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: editButton,
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

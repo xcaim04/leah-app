@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 
 import '../../domain/today/look_of_the_day.dart';
 import '../repositories/settings_repository.dart';
@@ -23,8 +24,10 @@ class OpenMeteoWeatherService implements WeatherService {
 
   @override
   Future<Weather?> current() async {
-    // Only Android is wired up; desktop preview has no usable location.
-    if (!Platform.isAndroid) return null;
+    // Android and web are wired up; desktop preview has no usable location.
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
+      return null;
+    }
     try {
       final position = await _position();
       if (position == null) return null;
@@ -50,6 +53,15 @@ class OpenMeteoWeatherService implements WeatherService {
         permission != LocationPermission.always) {
       return null;
     }
+    if (kIsWeb) {
+      // Web has no last-known position nor Android-specific settings.
+      return Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: _timeout,
+        ),
+      );
+    }
     final last = await Geolocator.getLastKnownPosition(
       forceAndroidLocationManager: true,
     );
@@ -70,18 +82,13 @@ class OpenMeteoWeatherService implements WeatherService {
       'longitude': lon.toStringAsFixed(2),
       'current': 'temperature_2m,weather_code',
     });
-    final client = HttpClient()..connectionTimeout = _timeout;
-    try {
-      final response = await (await client.getUrl(uri)).close();
-      if (response.statusCode != 200) return null;
-      final body = jsonDecode(await response.transform(utf8.decoder).join());
-      final current = (body as Map<String, dynamic>)['current'] as Map;
-      return Weather(
-        temperatureC: (current['temperature_2m'] as num).toDouble(),
-        weatherCode: (current['weather_code'] as num).toInt(),
-      );
-    } finally {
-      client.close(force: true);
-    }
+    final response = await http.get(uri).timeout(_timeout);
+    if (response.statusCode != 200) return null;
+    final body = jsonDecode(response.body);
+    final current = (body as Map<String, dynamic>)['current'] as Map;
+    return Weather(
+      temperatureC: (current['temperature_2m'] as num).toDouble(),
+      weatherCode: (current['weather_code'] as num).toInt(),
+    );
   }
 }

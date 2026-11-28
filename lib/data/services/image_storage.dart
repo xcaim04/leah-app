@@ -1,9 +1,8 @@
-import 'dart:io';
-import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
 
-import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import '../db/app_database.dart';
 
 class ImageStorageException implements Exception {
   ImageStorageException(this.message, [this.cause]);
@@ -15,80 +14,47 @@ class ImageStorageException implements Exception {
   String toString() => 'ImageStorageException: $message';
 }
 
-class ImageFileNames {
-  const ImageFileNames({required this.photoName, required this.thumbName});
-
-  final String photoName;
-  final String thumbName;
-}
-
 class ImageStorageHelper {
-  static final Random _random = Random();
+  static const int thumbWidth = 300;
 
-  /// Compressed output is always JPEG, so the stored extension is always .jpg.
-  static const fileExtension = '.jpg';
-
-  static String generateBaseName({DateTime? now, int? randomValue}) {
-    final time = now ?? DateTime.now();
-    final random = randomValue ?? _random.nextInt(1 << 20);
-    return '${time.microsecondsSinceEpoch}_$random';
+  /// JPEG thumbnail [thumbWidth] px wide (never upscaled), or null if [bytes]
+  /// isn't a decodable image. Pure Dart so it runs on web and in `compute`.
+  static Uint8List? buildThumbnail(Uint8List bytes) {
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) return null;
+    final resized = decoded.width > thumbWidth
+        ? img.copyResize(decoded, width: thumbWidth)
+        : decoded;
+    return img.encodeJpg(resized, quality: 75);
   }
-
-  static ImageFileNames buildFileNames({DateTime? now, int? randomValue}) {
-    const ext = fileExtension;
-    final base = generateBaseName(now: now, randomValue: randomValue);
-    return ImageFileNames(photoName: '$base$ext', thumbName: '${base}_thumb$ext');
-  }
-
-  static String photoRelativePath(String fileName) => p.join('photos', fileName);
-
-  static String thumbRelativePath(String fileName) => p.join('thumbs', fileName);
 }
 
+/// Stores photos as BLOBs in the `images` table; ids are returned as text so
+/// they fit the existing `garments.photo_path` / `thumb_path` columns.
 class ImageStorage {
-  ImageStorage({Future<Directory> Function()? documentsDirectoryProvider})
-      : _documentsDirectoryProvider =
-            documentsDirectoryProvider ?? getApplicationDocumentsDirectory;
+  ImageStorage(this._database);
 
-  final Future<Directory> Function() _documentsDirectoryProvider;
+  static const String _table = 'images';
 
-  Future<({String photoPath, String thumbPath})> save(String sourcePath) async {
+  final AppDatabase _database;
+
+  /// [picked] is already downscaled by the picker (maxWidth/imageQuality).
+  Future<({String photoId, String thumbId})> save(XFile picked) async {
     try {
-      final source = File(sourcePath);
-      if (!await source.exists()) {
-        throw ImageStorageException('El archivo de origen no existe');
-      }
-      final baseDir = await _documentsDirectoryProvider();
-      final photosDir = Directory(p.join(baseDir.path, 'photos'));
-      final thumbsDir = Directory(p.join(baseDir.path, 'thumbs'));
-      await photosDir.create(recursive: true);
-      await thumbsDir.create(recursive: true);
-
-      final names = ImageStorageHelper.buildFileNames();
-      final photoTarget = p.join(photosDir.path, names.photoName);
-      final thumbTarget = p.join(thumbsDir.path, names.thumbName);
-
-      final photoBytes = await FlutterImageCompress.compressWithFile(
-        sourcePath,
-        minWidth: 1080,
-        minHeight: 1080,
-        quality: 80,
+      final photoBytes = await picked.readAsBytes();
+      final thumbBytes = await compute(
+        ImageStorageHelper.buildThumbnail,
+        photoBytes,
       );
-      final thumbBytes = await FlutterImageCompress.compressWithFile(
-        sourcePath,
-        minWidth: 300,
-        minHeight: 300,
-        quality: 70,
-      );
-
-      if (photoBytes == null || thumbBytes == null) {
+      if (thumbBytes == null) {
         throw ImageStorageException('No se pudo procesar la imagen');
       }
-
-      await File(photoTarget).writeAsBytes(photoBytes, flush: true);
-      await File(thumbTarget).writeAsBytes(thumbBytes, flush: true);
-
-      return (photoPath: photoTarget, thumbPath: thumbTarget);
+      final db = await _database.database;
+      return await db.transaction((txn) async {
+        final photoId = await txn.insert(_table, {'bytes': photoBytes});
+        final thumbId = await txn.insert(_table, {'bytes': thumbBytes});
+        return (photoId: '$photoId', thumbId: '$thumbId');
+      });
     } on ImageStorageException {
       rethrow;
     } catch (e) {
@@ -96,16 +62,27 @@ class ImageStorage {
     }
   }
 
-  Future<void> delete(String photoPath, String thumbPath) async {
+  Future<Uint8List?> load(String id) async {
+    final key = int.tryParse(id);
+    if (key == null) return null; // pre-v3 file path: photo not migrated
+    final db = await _database.database;
+    final rows = await db.query(
+      _table,
+      columns: ['bytes'],
+      where: 'id = ?',
+      whereArgs: [key],
+    );
+    return rows.isEmpty ? null : rows.first['bytes'] as Uint8List;
+  }
+
+  Future<void> delete(String photoId, String thumbId) async {
     try {
-      final photo = File(photoPath);
-      if (await photo.exists()) {
-        await photo.delete();
-      }
-      final thumb = File(thumbPath);
-      if (await thumb.exists()) {
-        await thumb.delete();
-      }
+      final db = await _database.database;
+      await db.delete(
+        _table,
+        where: 'id IN (?, ?)',
+        whereArgs: [int.tryParse(photoId), int.tryParse(thumbId)],
+      );
     } catch (e) {
       throw ImageStorageException('No se pudo eliminar la imagen', e);
     }

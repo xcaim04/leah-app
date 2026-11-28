@@ -5,6 +5,7 @@ import '../../data/services/weather_service.dart';
 import '../../domain/models/garment.dart';
 import '../../domain/models/outfit.dart';
 import '../../domain/models/outfit_feedback.dart';
+import '../../domain/models/wear_entry.dart';
 import '../../domain/outfit/liked_outfits.dart';
 import '../../domain/outfit/outfit_engine.dart' as engine;
 import '../../domain/outfit/scoring_weights.dart';
@@ -56,6 +57,7 @@ final generatedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
   final filters = ref.watch(outfitFiltersProvider);
   final weights = ref.watch(scoringWeightsProvider);
   final disliked = ref.watch(dislikedSignaturesProvider);
+  final worn = ref.watch(recentlyWornProvider);
   return garmentsAsync.whenData(
     (garments) => engine.generate(
       garments,
@@ -64,6 +66,7 @@ final generatedOutfitsProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
       weights: weights,
       limit: 20,
       excludedSignatures: disliked,
+      recentlyWorn: worn,
     ),
   );
 });
@@ -102,6 +105,7 @@ final lookOfTheDayProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
   final weather = ref.watch(todayWeatherProvider).asData?.value;
   final weights = ref.watch(scoringWeightsProvider);
   final disliked = ref.watch(dislikedSignaturesProvider);
+  final worn = ref.watch(recentlyWornProvider);
   return ref
       .watch(garmentsProvider)
       .whenData(
@@ -111,6 +115,7 @@ final lookOfTheDayProvider = Provider<AsyncValue<List<Outfit>>>((ref) {
           weather: weather,
           weights: weights,
           excludedSignatures: disliked,
+          recentlyWorn: worn,
         ),
       );
 });
@@ -156,6 +161,59 @@ class OutfitFeedbackController {
     _ref.invalidate(outfitFeedbackProvider);
   }
 }
+
+/// Garments worn in the 3 days before today (penalised in suggestions).
+/// Today is left out so logging a look doesn't reshuffle the card she tapped.
+final recentlyWornProvider = Provider<Set<int>>((ref) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final since = DateTime(now.year, now.month, now.day - 3);
+  return {
+    for (final e
+        in ref.watch(wearLogProvider).asData?.value ?? const <WearEntry>[])
+      if (!e.wornOn.isBefore(since) && e.wornOn.isBefore(today))
+        ...e.garmentIds,
+  };
+});
+
+/// Today's wear-log entry per look signature ("Me lo puse hoy").
+final wornTodayProvider = Provider<Map<String, WearEntry>>((ref) {
+  final today = WearEntry.dayKey(DateTime.now());
+  return {
+    for (final e
+        in ref.watch(wearLogProvider).asData?.value ?? const <WearEntry>[])
+      if (WearEntry.dayKey(e.wornOn) == today) e.signature: e,
+  };
+});
+
+class WearLogController {
+  WearLogController(this._ref);
+
+  final Ref _ref;
+
+  Future<void> wearToday(Outfit outfit) async {
+    final now = DateTime.now();
+    await _ref
+        .read(wearLogRepositoryProvider)
+        .add(
+          WearEntry(
+            signature: outfit.signature,
+            garmentIds: outfit.garmentIds,
+            wornOn: DateTime(now.year, now.month, now.day),
+          ),
+        );
+    _ref.invalidate(wearLogProvider);
+  }
+
+  Future<void> delete(int id) async {
+    await _ref.read(wearLogRepositoryProvider).deleteById(id);
+    _ref.invalidate(wearLogProvider);
+  }
+}
+
+final wearLogControllerProvider = Provider<WearLogController>(
+  (ref) => WearLogController(ref),
+);
 
 final feedbackControllerProvider = Provider<OutfitFeedbackController>(
   (ref) => OutfitFeedbackController(ref),

@@ -17,26 +17,40 @@ class FavoritesScreen extends ConsumerWidget {
       body: outfitsAsync.when(
         data: (liked) {
           if (liked.isEmpty) {
-            return const EmptyState(
-              icon: Icons.favorite_border,
-              title: 'Aún no hay favoritos',
-              message: 'Marca con "me gusta" los looks que más te gusten.',
+            return const _Narrow(
+              child: EmptyState(
+                icon: Icons.favorite_border,
+                title: 'Aún no hay favoritos',
+                message: 'Marca con "me gusta" los looks que más te gusten.',
+              ),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            itemCount: liked.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 14),
-            itemBuilder: (context, index) => OutfitCard(outfit: liked[index]),
-          );
+          return CustomScrollView(slivers: [SliverOutfitGrid(outfits: liked)]);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const EmptyState(
-          icon: Icons.error_outline,
-          title: 'No se pudieron cargar los favoritos',
-          message: 'Vuelve a intentarlo en un momento.',
+        error: (_, __) => const _Narrow(
+          child: EmptyState(
+            icon: Icons.error_outline,
+            title: 'No se pudieron cargar los favoritos',
+            message: 'Vuelve a intentarlo en un momento.',
+          ),
         ),
       ),
     );
   }
+}
+
+/// Centers a state message and keeps it from stretching on wide windows.
+class _Narrow extends StatelessWidget {
+  const _Narrow({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 560),
+      child: child,
+    ),
+  );
 }

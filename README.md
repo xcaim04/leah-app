@@ -1,8 +1,8 @@
 # Mi Armario
 
-Armario digital para Android, pensado para una sola persona. Fotografías tu ropa, la app detecta sus colores y te propone combinaciones (looks) que aprende de lo que te gusta.
+Armario digital para Android y web, pensado para una sola persona. Fotografías tu ropa, la app detecta sus colores y te propone combinaciones (looks) que aprende de lo que te gusta.
 
-Todo funciona **sin conexión**: no hay servidor, cuentas, anuncios ni inteligencia artificial en la nube. Las fotos y los datos se guardan solo en el teléfono.
+Todo funciona **sin conexión**: no hay servidor, cuentas, anuncios ni inteligencia artificial en la nube. Las fotos y los datos se guardan solo en tu dispositivo (o en tu navegador, en la versión web).
 
 > Nombre interno del proyecto: **Leah**. El paquete Dart se llama `mi_armario`.
 
@@ -18,12 +18,30 @@ Todo funciona **sin conexión**: no hay servidor, cuentas, anuncios ni inteligen
 
 <sub>Capturas reales de la vista previa de escritorio con un armario de ejemplo (prendas dibujadas, no fotos).</sub>
 
+## Versión web
+
+Disponible en **https://xcaim04.github.io/leahApp/** y funciona en cualquier navegador moderno.
+
+**Instalar en el teléfono**
+
+- Chrome (Android): menú ⋮ → *Añadir a pantalla de inicio* / *Instalar app*.
+- iPhone (Safari): *Compartir* → *Añadir a pantalla de inicio*.
+
+Tras la primera carga funciona **sin conexión** (solo el tiempo necesita red).
+
+**Importante:** los datos (prendas y fotos) se guardan únicamente en ese navegador. Haz **copias de seguridad** con regularidad (menú ⋮ en Armario → *Copia de seguridad*). Si borras los datos del navegador, **se borra el armario**.
+
 ## Qué hace
 
 - **Armario**: añade prendas con la cámara o la galería. Cada prenda tiene categoría (parte superior, parte inferior, vestido, calzado, abrigo, accesorio), ocasión (casual, trabajo, fiesta, deporte), temporada (verano, invierno, entretiempo, todo el año) y notas. Se puede filtrar, editar, borrar y marcar como favorita.
 - **Looks**: sugiere hasta 20 combinaciones ordenadas por puntuación, con una explicación en español de por qué combinan. Se pueden filtrar por ocasión y temporada.
 - **Feedback**: cada look tiene un ♡ para guardarlo y, en su menú ⋮, «No sugerir más». Los votos ajustan las sugerencias futuras.
 - **Favoritos**: los looks guardados con ♡. Tocar el ♡ de nuevo lo quita de favoritos.
+- **Diario / historial**: registra qué te pones cada día.
+- **Accesorios en looks**: los accesorios participan en las combinaciones.
+- **Compartir look**: exporta un look como imagen para compartirlo.
+- **Estadísticas**: resumen de uso de tu armario.
+- **Copia de seguridad**: exporta e importa todo el armario.
 - **Tema** claro, oscuro o el del sistema, desde el botón de la barra superior. La elección se guarda.
 
 ## Cómo se generan los looks
@@ -82,8 +100,9 @@ Los looks marcados con «No sugerir más» no vuelven a aparecer en las sugerenc
 |---|---|
 | Framework | Flutter (CI con 3.44.9), Dart ^3.9, Material 3 |
 | Estado | `flutter_riverpod` |
-| Datos | SQLite con `sqflite` (migraciones versionadas, esquema v2) |
-| Fotos | `image_picker` + `flutter_image_compress` (foto ~1080 px y miniatura ~300 px en JPEG) |
+| Datos | SQLite con migraciones versionadas: `sqflite` en Android, `sqflite_common_ffi_web` (IndexedDB) en web; las fotos se guardan dentro de la base de datos |
+| Fotos | `image_picker` (cámara y galería) |
+| Compartir / copias | `share_plus`, `file_picker` |
 | Color | `palette_generator` |
 | Diseño | sistema "Coquette Violette" (`design/coquette_violette/DESIGN.md`) |
 | Tests | `flutter_test` + `sqflite_common_ffi` (SQLite en memoria, sin dispositivo) |
@@ -202,8 +221,7 @@ Nota: un APK firmado con la clave de depuración no se puede actualizar con uno 
 
 - Los umbrales de armonía son heurísticos: hay que ajustarlos con prendas reales.
 - El fondo de la foto puede contaminar la paleta; faltan muestreo central, recorte de fondo o poder quitar un color a mano.
-- Los accesorios no participan en los looks.
-- No hay copia de seguridad ni exportación del armario: si desinstalas la app, se pierde.
-- La fuente del diseño (Plus Jakarta Sans) aún no está empaquetada; se usa la del sistema.
-- Solo Android. iOS no está configurado.
+- Los accesorios solo se añaden a los mejores looks si suben la puntuación; nunca forman un look por sí solos.
+- Los datos viven solo en el dispositivo o navegador: sin copia de seguridad exportada, borrar los datos del navegador o desinstalar la app los pierde.
+- Android y web. iOS nativo no está configurado (en iPhone se usa la versión web).
 - Pendiente de verificar en dispositivo: permisos de cámara y galería y el flujo de alta con fotos reales; medir el tamaño del APK (objetivo < 40 MB).

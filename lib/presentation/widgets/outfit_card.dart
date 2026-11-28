@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +5,8 @@ import '../../domain/models/garment.dart';
 import '../../domain/models/outfit.dart';
 import '../../domain/models/outfit_feedback.dart';
 import '../providers/outfit_providers.dart';
+import '../share/share_look.dart';
+import 'garment_image.dart';
 
 class OutfitCard extends ConsumerWidget {
   const OutfitCard({
@@ -28,6 +28,8 @@ class OutfitCard extends ConsumerWidget {
         ref.watch(latestRatingsProvider)[outfit.signature] ==
         FeedbackRating.like;
     final controller = ref.read(feedbackControllerProvider);
+    final wornToday = ref.watch(wornTodayProvider)[outfit.signature];
+    final wearLog = ref.read(wearLogControllerProvider);
 
     void snack(String message) => ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -51,13 +53,23 @@ class OutfitCard extends ConsumerWidget {
         children: [
           Stack(
             children: [
-              Row(
-                children: [
-                  for (final (i, g) in outfit.garments.indexed) ...[
-                    if (i > 0) const SizedBox(width: 8),
-                    Expanded(child: _GarmentImage(garment: g)),
-                  ],
-                ],
+              // Cap each 3:4 image at 260 high by capping the row's width.
+              Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth:
+                        outfit.garments.length * 260 * 3 / 4 +
+                        (outfit.garments.length - 1) * 8,
+                  ),
+                  child: Row(
+                    children: [
+                      for (final (i, g) in outfit.garments.indexed) ...[
+                        if (i > 0) const SizedBox(width: 8),
+                        Expanded(child: _GarmentImage(garment: g)),
+                      ],
+                    ],
+                  ),
+                ),
               ),
               if (showScore)
                 Positioned(
@@ -79,8 +91,26 @@ class OutfitCard extends ConsumerWidget {
           ),
           if (showFeedback)
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                TextButton.icon(
+                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                  icon: Icon(
+                    wornToday != null ? Icons.event_available : Icons.checkroom,
+                  ),
+                  label: Text(
+                    wornToday != null ? 'Puesto hoy' : 'Me lo puse hoy',
+                  ),
+                  onPressed: wornToday != null
+                      ? () {
+                          wearLog.delete(wornToday.id!);
+                          snack('Quitado del diario de hoy');
+                        }
+                      : () {
+                          wearLog.wearToday(outfit);
+                          snack('Guardado en tu diario');
+                        },
+                ),
+                const Spacer(),
                 IconButton(
                   tooltip: liked
                       ? 'Quitar de favoritos'
@@ -100,8 +130,16 @@ class OutfitCard extends ConsumerWidget {
                 PopupMenuButton<void>(
                   tooltip: 'Más opciones',
                   icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
-                  constraints: const BoxConstraints(minWidth: 48),
-                  itemBuilder: (context) => [
+                  // Card context, not the menu's: the menu is gone when onTap runs.
+                  itemBuilder: (_) => [
+                    PopupMenuItem<void>(
+                      onTap: () => shareOutfit(context, ref, outfit),
+                      child: const ListTile(
+                        leading: Icon(Icons.share),
+                        title: Text('Compartir'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
                     PopupMenuItem<void>(
                       onTap: () {
                         controller.dislike(outfit);
@@ -123,6 +161,44 @@ class OutfitCard extends ConsumerWidget {
   }
 }
 
+/// Responsive grid of [OutfitCard]s: 1 column on phones, up to 3 on wide
+/// windows, content capped at 1280. Place inside a [CustomScrollView].
+class SliverOutfitGrid extends StatelessWidget {
+  const SliverOutfitGrid({super.key, required this.outfits});
+
+  final List<Outfit> outfits;
+
+  @override
+  Widget build(BuildContext context) => SliverLayoutBuilder(
+    builder: (context, c) {
+      final contentW = (c.crossAxisExtent.clamp(0, 1280) - 32).toDouble();
+      final side = (c.crossAxisExtent - contentW) / 2;
+      final cols = (contentW / 400).floor().clamp(1, 3);
+      final rows = (outfits.length / cols).ceil();
+      return SliverPadding(
+        padding: EdgeInsets.fromLTRB(side, 8, side, 16),
+        sliver: SliverList.separated(
+          itemCount: rows,
+          separatorBuilder: (_, __) => const SizedBox(height: 14),
+          itemBuilder: (context, r) => Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var j = 0; j < cols; j++) ...[
+                if (j > 0) const SizedBox(width: 14),
+                Expanded(
+                  child: r * cols + j < outfits.length
+                      ? OutfitCard(outfit: outfits[r * cols + j])
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class _GarmentImage extends StatelessWidget {
   const _GarmentImage({required this.garment});
 
@@ -141,13 +217,7 @@ class _GarmentImage extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Image.file(
-            File(garment.thumbPath),
-            fit: BoxFit.cover,
-            cacheWidth: 400,
-            errorBuilder: (context, error, stackTrace) =>
-                Icon(Icons.checkroom_outlined, color: scheme.onSurfaceVariant),
-          ),
+          child: GarmentImage(imageId: garment.thumbPath, cacheWidth: 400),
         ),
       ),
     );

@@ -13,6 +13,7 @@ List<Outfit> generate(
   ScoringWeights weights = const ScoringWeights.defaults(),
   int limit = 20,
   Set<String> excludedSignatures = const {},
+  Set<int> recentlyWorn = const {},
 }) {
   final filtered = garments.where((g) {
     if (occasion != null && g.occasion != occasion) return false;
@@ -34,6 +35,9 @@ List<Outfit> generate(
       .toList();
   final outerwear = filtered
       .where((g) => g.category == GarmentCategory.outerwear)
+      .toList();
+  final accessories = filtered
+      .where((g) => g.category == GarmentCategory.accessory)
       .toList();
 
   final combos = <List<Garment>>[];
@@ -71,26 +75,42 @@ List<Outfit> generate(
   }
 
   // Score everything, but only build explanations for the kept `limit`.
-  final scored = <(Outfit, HarmonyType)>[];
-  for (final items in combos) {
+  (double, HarmonyType) score(List<Garment> items) {
     final result = scoreWithHsl(items, [
       for (final g in items) hsl[g]!,
     ], weights);
-    final outfit = Outfit(
-      garments: items,
-      score: result.score,
-      explanation: '',
+    final worn = items.where((g) => recentlyWorn.contains(g.id)).length;
+    final penalized = (result.score - worn * recentlyWornPenalty).clamp(
+      0.0,
+      1.0,
     );
+    return (penalized, result.dominantHarmony);
+  }
+
+  final scored = <(Outfit, HarmonyType)>[];
+  for (final items in combos) {
+    final (value, harmony) = score(items);
+    final outfit = Outfit(garments: items, score: value, explanation: '');
     if (excludedSignatures.contains(outfit.signature)) continue;
-    scored.add((outfit, result.dominantHarmony));
+    scored.add((outfit, harmony));
   }
 
   scored.sort((a, b) => b.$1.score.compareTo(a.$1.score));
   final kept = limit <= 0 || scored.length <= limit
       ? scored
       : scored.sublist(0, limit);
+
+  // Finish each kept look with the accessory that most improves it, if any.
+  final finished = [
+    for (final entry in kept)
+      if (accessories.isEmpty)
+        entry
+      else
+        _accessorize(entry, accessories, score, excludedSignatures),
+  ]..sort((a, b) => b.$1.score.compareTo(a.$1.score));
+
   return [
-    for (final (o, harmony) in kept)
+    for (final (o, harmony) in finished)
       Outfit(
         garments: o.garments,
         score: o.score,
@@ -102,4 +122,25 @@ List<Outfit> generate(
         ),
       ),
   ];
+}
+
+/// Score lost per garment worn in the last few days, so suggestions rotate.
+const double recentlyWornPenalty = 0.06;
+
+(Outfit, HarmonyType) _accessorize(
+  (Outfit, HarmonyType) entry,
+  List<Garment> accessories,
+  (double, HarmonyType) Function(List<Garment>) score,
+  Set<String> excludedSignatures,
+) {
+  var best = entry;
+  for (final accessory in accessories) {
+    final items = [...entry.$1.garments, accessory];
+    final (value, harmony) = score(items);
+    if (value <= best.$1.score) continue;
+    final outfit = Outfit(garments: items, score: value, explanation: '');
+    if (excludedSignatures.contains(outfit.signature)) continue;
+    best = (outfit, harmony);
+  }
+  return best;
 }

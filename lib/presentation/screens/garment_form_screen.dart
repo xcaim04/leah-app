@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../domain/models/garment.dart';
 import '../../domain/models/garment_color.dart';
 import '../providers/providers.dart';
+import '../widgets/garment_image.dart';
+import '../widgets/responsive.dart';
 
 class GarmentFormScreen extends ConsumerStatefulWidget {
   const GarmentFormScreen({super.key, this.garment});
@@ -22,7 +25,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   final _notesController = TextEditingController();
   final _picker = ImagePicker();
 
-  String? _pickedImagePath;
+  XFile? _pickedImage;
+  Uint8List? _pickedBytes;
   GarmentCategory? _category;
   Occasion? _occasion;
   Season? _season;
@@ -52,24 +56,33 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
   Future<void> _pickFrom(ImageSource source, String errorMessage) async {
     try {
-      final file = await _picker.pickImage(source: source);
-      if (file != null && mounted) {
-        setState(() => _pickedImagePath = file.path);
+      final file = await _picker.pickImage(
+        source: source,
+        maxWidth: 1080,
+        imageQuality: 80,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (mounted) {
+        setState(() {
+          _pickedImage = file;
+          _pickedBytes = bytes;
+        });
       }
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!_isEditing && _pickedImagePath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona una foto')),
-      );
+    if (!_isEditing && _pickedImage == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecciona una foto')));
       return;
     }
     if (_category == null || _occasion == null || _season == null) {
@@ -83,7 +96,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
     setState(() => _saving = true);
     final imageStorage = ref.read(imageStorageProvider);
-    ({String photoPath, String thumbPath})? saved;
+    ({String photoId, String thumbId})? saved;
     var dbWritten = false;
     try {
       final paletteExtractor = ref.read(paletteExtractorProvider);
@@ -93,12 +106,12 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       String thumbPath;
       var colors = widget.garment?.colors ?? const [];
 
-      if (_pickedImagePath != null) {
-        final stored = saved = await imageStorage.save(_pickedImagePath!);
-        photoPath = stored.photoPath;
-        thumbPath = stored.thumbPath;
+      if (_pickedImage != null) {
+        final stored = saved = await imageStorage.save(_pickedImage!);
+        photoPath = stored.photoId;
+        thumbPath = stored.thumbId;
         try {
-          colors = await paletteExtractor.extract(photoPath);
+          colors = await paletteExtractor.extract(_pickedBytes!);
         } catch (_) {
           colors = const [];
         }
@@ -138,13 +151,15 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         await repository.insert(garment);
       }
       dbWritten = true;
-      // Best-effort: the DB already points at the new files, so a leftover old file is harmless.
+      // Best-effort: the DB already points at the new images, so a leftover old one is harmless.
       if (_isEditing && saved != null) {
         try {
           await imageStorage.delete(
             widget.garment!.photoPath,
             widget.garment!.thumbPath,
           );
+          ref.invalidate(imageBytesProvider(widget.garment!.photoPath));
+          ref.invalidate(imageBytesProvider(widget.garment!.thumbPath));
         } catch (_) {}
       }
 
@@ -152,10 +167,10 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (_) {
-      // Don't leave the new photo files orphaned when the DB write never happened.
+      // Don't leave the new images orphaned when the DB write never happened.
       if (saved != null && !dbWritten) {
         try {
-          await imageStorage.delete(saved.photoPath, saved.thumbPath);
+          await imageStorage.delete(saved.photoId, saved.thumbId);
         } catch (_) {}
       }
       if (!mounted) return;
@@ -172,7 +187,6 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final previewPath = _pickedImagePath ?? widget.garment?.thumbPath;
 
     return Scaffold(
       appBar: AppBar(
@@ -180,104 +194,127 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            _PhotoHero(
-              previewPath: previewPath,
-              enabled: !_saving,
-              onCamera: () => _pickFrom(
-                ImageSource.camera,
-                'No se pudo abrir la cámara. Revisa los permisos.',
-              ),
-              onGallery: () => _pickFrom(
-                ImageSource.gallery,
-                'No se pudo abrir la galería.',
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (_isEditing &&
-                widget.garment!.colors.isNotEmpty) ...[
-              _DetectedColors(colors: widget.garment!.colors),
-              const SizedBox(height: 16),
-            ],
-            _SectionCard(
-              icon: Icons.style_outlined,
-              title: 'Categoría',
-              child: _ChipGroup<GarmentCategory>(
-                values: GarmentCategory.values,
-                selected: _category,
-                labelOf: (v) => v.label,
-                enabled: !_saving,
-                onSelected: (v) => setState(() => _category = v),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              icon: Icons.celebration_outlined,
-              title: 'Ocasión',
-              child: _ChipGroup<Occasion>(
-                values: Occasion.values,
-                selected: _occasion,
-                labelOf: (v) => v.label,
-                enabled: !_saving,
-                onSelected: (v) => setState(() => _occasion = v),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              icon: Icons.calendar_today_outlined,
-              title: 'Temporada',
-              child: _ChipGroup<Season>(
-                values: Season.values,
-                selected: _season,
-                labelOf: (v) => v.label,
-                iconOf: _seasonIcon,
-                enabled: !_saving,
-                onSelected: (v) => setState(() => _season = v),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              icon: Icons.favorite_border,
-              title: 'Notas y cuidados',
-              trailing: 'Opcional',
-              child: TextFormField(
-                controller: _notesController,
-                maxLines: 3,
-                enabled: !_saving,
-                decoration: const InputDecoration(
-                  hintText: 'Ej: lavar a mano con agua fría…',
+        // Center via padding (not a width-capped box) so the mouse wheel also
+        // scrolls when the pointer is over the side margins on desktop.
+        child: Builder(
+          builder: (context) {
+            final side = math.max(
+              16.0,
+              (MediaQuery.sizeOf(context).width - 720) / 2 + 16,
+            );
+            return ListView(
+              padding: EdgeInsets.fromLTRB(side, 8, side, 32),
+              children: [
+                // Phones keep the full-width photo; wider windows cap its height.
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth:
+                          MediaQuery.sizeOf(context).width >= Breakpoints.medium
+                          ? 420
+                          : double.infinity,
+                    ),
+                    child: _PhotoHero(
+                      pickedBytes: _pickedBytes,
+                      storedImageId: widget.garment?.thumbPath,
+                      enabled: !_saving,
+                      onCamera: () => _pickFrom(
+                        ImageSource.camera,
+                        'No se pudo abrir la cámara. Revisa los permisos.',
+                      ),
+                      onGallery: () => _pickFrom(
+                        ImageSource.gallery,
+                        'No se pudo abrir la galería.',
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _FavoriteSwitch(
-              value: _favorite,
-              enabled: !_saving,
-              onChanged: (v) => setState(() => _favorite = v),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-              label: Text(_isEditing ? 'Guardar cambios' : 'Guardar prenda'),
-            ),
-            if (_isEditing) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Para eliminar esta prenda, ábrela desde el armario.',
-                style: theme.textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
+                const SizedBox(height: 20),
+                if (_isEditing && widget.garment!.colors.isNotEmpty) ...[
+                  _DetectedColors(colors: widget.garment!.colors),
+                  const SizedBox(height: 16),
+                ],
+                _SectionCard(
+                  icon: Icons.style_outlined,
+                  title: 'Categoría',
+                  child: _ChipGroup<GarmentCategory>(
+                    values: GarmentCategory.values,
+                    selected: _category,
+                    labelOf: (v) => v.label,
+                    enabled: !_saving,
+                    onSelected: (v) => setState(() => _category = v),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _SectionCard(
+                  icon: Icons.celebration_outlined,
+                  title: 'Ocasión',
+                  child: _ChipGroup<Occasion>(
+                    values: Occasion.values,
+                    selected: _occasion,
+                    labelOf: (v) => v.label,
+                    enabled: !_saving,
+                    onSelected: (v) => setState(() => _occasion = v),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _SectionCard(
+                  icon: Icons.calendar_today_outlined,
+                  title: 'Temporada',
+                  child: _ChipGroup<Season>(
+                    values: Season.values,
+                    selected: _season,
+                    labelOf: (v) => v.label,
+                    iconOf: _seasonIcon,
+                    enabled: !_saving,
+                    onSelected: (v) => setState(() => _season = v),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _SectionCard(
+                  icon: Icons.favorite_border,
+                  title: 'Notas y cuidados',
+                  trailing: 'Opcional',
+                  child: TextFormField(
+                    controller: _notesController,
+                    maxLines: 3,
+                    enabled: !_saving,
+                    decoration: const InputDecoration(
+                      hintText: 'Ej: lavar a mano con agua fría…',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _FavoriteSwitch(
+                  value: _favorite,
+                  enabled: !_saving,
+                  onChanged: (v) => setState(() => _favorite = v),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(
+                    _isEditing ? 'Guardar cambios' : 'Guardar prenda',
+                  ),
+                ),
+                if (_isEditing) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Para eliminar esta prenda, ábrela desde el armario.',
+                    style: theme.textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -299,13 +336,15 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
 class _PhotoHero extends StatelessWidget {
   const _PhotoHero({
-    required this.previewPath,
+    required this.pickedBytes,
+    required this.storedImageId,
     required this.enabled,
     required this.onCamera,
     required this.onGallery,
   });
 
-  final String? previewPath;
+  final Uint8List? pickedBytes;
+  final String? storedImageId;
   final bool enabled;
   final VoidCallback onCamera;
   final VoidCallback onGallery;
@@ -313,6 +352,7 @@ class _PhotoHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final hasPhoto = pickedBytes != null || storedImageId != null;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -335,7 +375,7 @@ class _PhotoHero extends StatelessWidget {
             children: [
               Container(
                 color: scheme.surfaceContainerLowest,
-                child: previewPath == null
+                child: !hasPhoto
                     ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -353,23 +393,30 @@ class _PhotoHero extends StatelessWidget {
                           ],
                         ),
                       )
-                    : Image.file(
-                        File(previewPath!),
+                    : pickedBytes != null
+                    ? Image.memory(
+                        pickedBytes!,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) =>
-                            const Center(child: Icon(Icons.broken_image_outlined)),
-                      ),
+                            const Center(
+                              child: Icon(Icons.broken_image_outlined),
+                            ),
+                      )
+                    : GarmentImage(imageId: storedImageId!),
               ),
-              if (previewPath != null)
+              if (hasPhoto)
                 Positioned(
                   left: 12,
                   top: 12,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest
-                          .withValues(alpha: 0.9),
+                      color: scheme.surfaceContainerLowest.withValues(
+                        alpha: 0.9,
+                      ),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -529,9 +576,7 @@ class _SectionCard extends StatelessWidget {
             children: [
               Icon(icon, size: 19, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(title, style: theme.textTheme.labelLarge),
-              ),
+              Expanded(child: Text(title, style: theme.textTheme.labelLarge)),
               if (trailing != null)
                 Text(trailing!, style: theme.textTheme.labelSmall),
             ],
@@ -623,7 +668,9 @@ class _FavoriteSwitch extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+              color: theme.colorScheme.secondaryContainer.withValues(
+                alpha: 0.5,
+              ),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -645,10 +692,7 @@ class _FavoriteSwitch extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: enabled ? onChanged : null,
-          ),
+          Switch(value: value, onChanged: enabled ? onChanged : null),
         ],
       ),
     );

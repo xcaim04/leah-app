@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../domain/models/garment.dart';
+import 'garment_image.dart';
 
 class GarmentCard extends StatelessWidget {
   const GarmentCard({
@@ -46,18 +45,7 @@ class GarmentCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.file(
-                        File(garment.thumbPath),
-                        fit: BoxFit.cover,
-                        cacheWidth: 600,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: scheme.surfaceContainerHighest,
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
+                      GarmentImage(imageId: garment.thumbPath, cacheWidth: 600),
                       Positioned(
                         right: 0,
                         top: 0,
@@ -93,7 +81,11 @@ class GarmentCard extends StatelessWidget {
                                     height: 14,
                                     decoration: BoxDecoration(
                                       color: Color.fromARGB(
-                                          255, c.red, c.green, c.blue),
+                                        255,
+                                        c.red,
+                                        c.green,
+                                        c.blue,
+                                      ),
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: scheme.surfaceContainerLowest,
@@ -127,8 +119,7 @@ class _FavoriteButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final label =
-        favorite ? 'Quitar de favoritos' : 'Marcar como favorito';
+    final label = favorite ? 'Quitar de favoritos' : 'Marcar como favorito';
 
     // 48dp hit area around the 34dp visual circle.
     return Tooltip(
